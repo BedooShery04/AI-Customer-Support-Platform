@@ -9,7 +9,6 @@ from sqlalchemy import (
     Text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from app.enums import (
     TicketCategory,
     TicketPriority,
