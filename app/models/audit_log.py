@@ -1,13 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import (
-    DateTime,
-    ForeignKey,
-    Index,
-    Integer,
-    String,
-    func,
-)
+from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base_class import Base
@@ -15,11 +8,6 @@ from app.database.base_class import Base
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
-
-    __table_args__ = (
-        Index("idx_audit_logs_admin_id", "admin_id"),
-        Index("idx_audit_logs_ticket_id", "ticket_id"),
-    )
 
     id: Mapped[int] = mapped_column(
         Integer,
@@ -34,7 +22,7 @@ class AuditLog(Base):
 
     ticket_id: Mapped[int] = mapped_column(
         Integer,
-        ForeignKey("tickets.id", ondelete="CASCADE"),
+        ForeignKey("tickets.id"),
         nullable=False
     )
 

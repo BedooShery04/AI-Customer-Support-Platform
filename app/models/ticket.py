@@ -23,17 +23,11 @@ from app.database.base_class import Base
 
 class Ticket(Base):
     __tablename__ = "tickets"
-    __table_args__ = (
-        Index("idx_tickets_customer_id", "customer_id"),
-        Index("idx_tickets_assigned_agent_id", "assigned_agent_id"),
-        Index("idx_tickets_priority", "priority"),
-        Index("idx_tickets_status", "status"),
-    )
 
     id: Mapped[int] = mapped_column(
         Integer,
         primary_key=True,
-       
+        index=True
     )
 
     customer_id: Mapped[int] = mapped_column(

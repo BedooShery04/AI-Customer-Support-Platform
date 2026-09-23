@@ -13,13 +13,8 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(
         Integer,
-        primary_key=True
-    )
-
-    email: Mapped[str] = mapped_column(
-        String(255),
-        unique=True,
-        nullable=False
+        primary_key=True,
+        index=True
     )
 
     name: Mapped[str] = mapped_column(
@@ -27,7 +22,12 @@ class User(Base):
         nullable=False
     )
 
-
+    email: Mapped[str] = mapped_column(
+        String(255),
+        unique=True,
+        nullable=False,
+        index=True
+    )
 
     password_hash: Mapped[str] = mapped_column(
         String(255),
