@@ -1,9 +1,16 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import (
+    DateTime,
+    Enum as SQLEnum,
+    ForeignKey,
+    Integer,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from database.base_class import Base
+from app.enums import TicketCategory, TicketPriority
+from app.database.base_class import Base
 
 
 class TicketAIClassification(Base):
@@ -22,13 +29,21 @@ class TicketAIClassification(Base):
         unique=True
     )
 
-    category: Mapped[str] = mapped_column(
-        String(50),
+    category: Mapped[TicketCategory] = mapped_column(
+        SQLEnum(
+            TicketCategory,
+            name="ticket_category",
+            values_callable=lambda enum_class: [item.value for item in enum_class]
+        ),
         nullable=False
     )
 
-    priority: Mapped[str] = mapped_column(
-        String(20),
+    priority: Mapped[TicketPriority] = mapped_column(
+        SQLEnum(
+            TicketPriority,
+            name="ticket_priority",
+            values_callable=lambda enum_class: [item.value for item in enum_class]
+        ),
         nullable=False
     )
 
@@ -44,8 +59,8 @@ class TicketAIClassification(Base):
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
-        default=datetime.utcnow,
-        nullable=False
+        nullable=False,
+        default=datetime.utcnow
     )
 
     # Classification -> Ticket
