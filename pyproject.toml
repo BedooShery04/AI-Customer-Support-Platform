@@ -13,6 +13,7 @@ dependencies = [
     "httpx>=0.28.1",
     "langchain>=1.4.2",
     "langchain-google-genai>=4.4.0",
+    "langchain-groq>=1.1.3",
     "langchain-openai>=1.6.2",
     "langgraph>=1.2.11",
     "passlib[bcrypt]>=1.7.4",
