@@ -1,39 +1,69 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
+from app.enums import UserRole
 from app.models.ticket import Ticket
 from app.schemas.ticket import TicketCreate, TicketUpdate
 
 
+# =========================================================
 # Get all tickets
+# =========================================================
+
 def get_all_tickets(db: Session):
     tickets = db.query(Ticket).all()
     return tickets
 
 
-# Get tickets for a specific customer
-def get_customer_tickets(customer_id: int, db: Session):
-    tickets = db.query(Ticket).filter(
-        Ticket.customer_id == customer_id
-    ).all()
+# =========================================================
+# Get customer's tickets
+# =========================================================
+
+def get_customer_tickets(
+    customer_id: int,
+    db: Session
+):
+    tickets = (
+        db.query(Ticket)
+        .filter(Ticket.customer_id == customer_id)
+        .all()
+    )
 
     return tickets
 
 
-# Get tickets assigned to a specific agent
-def get_agent_tickets(agent_id: int, db: Session):
-    tickets = db.query(Ticket).filter(
-        Ticket.assigned_agent_id == agent_id
-    ).all()
+# =========================================================
+# Get agent's assigned tickets
+# =========================================================
+
+def get_agent_tickets(
+    agent_id: int,
+    db: Session
+):
+    tickets = (
+        db.query(Ticket)
+        .filter(Ticket.assigned_agent_id == agent_id)
+        .all()
+    )
 
     return tickets
 
 
+# =========================================================
 # Get specific ticket
-def get_ticket(ticket_id: int, db: Session):
-    ticket = db.query(Ticket).filter(
-        Ticket.id == ticket_id
-    ).first()
+# =========================================================
+
+def get_ticket(
+    ticket_id: int,
+    user_id: int,
+    user_role: UserRole,
+    db: Session
+):
+    ticket = (
+        db.query(Ticket)
+        .filter(Ticket.id == ticket_id)
+        .first()
+    )
 
     if ticket is None:
         raise HTTPException(
@@ -41,10 +71,40 @@ def get_ticket(ticket_id: int, db: Session):
             detail="Ticket not found"
         )
 
-    return ticket
+    # Admin can view any ticket
+    if user_role == UserRole.ADMIN:
+        return ticket
+
+    # Customer can view only their own tickets
+    if user_role == UserRole.CUSTOMER:
+        if ticket.customer_id != user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="You are not allowed to access this ticket"
+            )
+
+        return ticket
+
+    # Agent can view only assigned tickets
+    if user_role == UserRole.AGENT:
+        if ticket.assigned_agent_id != user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="You are not allowed to access this ticket"
+            )
+
+        return ticket
+
+    raise HTTPException(
+        status_code=403,
+        detail="You are not allowed to access tickets"
+    )
 
 
+# =========================================================
 # Create a new ticket
+# =========================================================
+
 def create_ticket(
     ticket_data: TicketCreate,
     customer_id: int,
@@ -65,20 +125,47 @@ def create_ticket(
     return new_ticket
 
 
-# Update a ticket
+# =========================================================
+# Update ticket
+# =========================================================
+
 def update_ticket(
     ticket_id: int,
     ticket_data: TicketUpdate,
+    user_id: int,
+    user_role: UserRole,
     db: Session
 ):
-    ticket = db.query(Ticket).filter(
-        Ticket.id == ticket_id
-    ).first()
+    ticket = (
+        db.query(Ticket)
+        .filter(Ticket.id == ticket_id)
+        .first()
+    )
 
     if ticket is None:
         raise HTTPException(
             status_code=404,
             detail="Ticket not found"
+        )
+
+    # Only Agent and Admin can update tickets
+    if user_role not in (
+        UserRole.AGENT,
+        UserRole.ADMIN
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You are not allowed to update tickets"
+        )
+
+    # Agent can update only assigned tickets
+    if (
+        user_role == UserRole.AGENT
+        and ticket.assigned_agent_id != user_id
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="You are not allowed to update this ticket"
         )
 
     if ticket_data.subject is not None:
@@ -97,7 +184,11 @@ def update_ticket(
         ticket.status = ticket_data.status
 
     if ticket_data.assigned_agent_id is not None:
-        ticket.assigned_agent_id = ticket_data.assigned_agent_id
+
+        # Assignment is handled by authorized users.
+        ticket.assigned_agent_id = (
+            ticket_data.assigned_agent_id
+        )
 
     db.commit()
     db.refresh(ticket)
@@ -105,16 +196,32 @@ def update_ticket(
     return ticket
 
 
-# Delete a ticket
-def delete_ticket(ticket_id: int, db: Session):
-    ticket = db.query(Ticket).filter(
-        Ticket.id == ticket_id
-    ).first()
+# =========================================================
+# Delete ticket
+# =========================================================
+
+def delete_ticket(
+    ticket_id: int,
+    user_role: UserRole,
+    db: Session
+):
+    ticket = (
+        db.query(Ticket)
+        .filter(Ticket.id == ticket_id)
+        .first()
+    )
 
     if ticket is None:
         raise HTTPException(
             status_code=404,
             detail="Ticket not found"
+        )
+
+    # Only Admin can delete tickets
+    if user_role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=403,
+            detail="Only admins can delete tickets"
         )
 
     db.delete(ticket)

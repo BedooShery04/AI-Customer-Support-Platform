@@ -1,15 +1,17 @@
 from langchain_core.tools import tool
 from sqlalchemy.orm import Session
 
+from app.enums import UserRole
 from app.schemas.ticket import TicketCreate, TicketUpdate
 from app.services import ticket_service
 
 
 def _ticket_to_dict(ticket):
     """
-    Convert a Ticket model object into a simple dictionary
-    that can be returned to the AI Agent.
+    Convert a Ticket object into a dictionary
+    that the AI can understand.
     """
+
     return {
         "id": ticket.id,
         "customer_id": ticket.customer_id,
@@ -24,41 +26,51 @@ def _ticket_to_dict(ticket):
     }
 
 
-def build_tools(db: Session, customer_id: int):
+def build_tools(
+    db: Session,
+    user_id: int,
+    user_role: UserRole
+):
     """
-    Build the tools available to the AI Agent.
-
-    customer_id comes from the authenticated user,
-    not from the LLM.
+    Build the tools for the current authenticated user.
     """
 
     @tool
     def get_customer_tickets():
         """
         Get the tickets belonging to the current customer.
-
-        Use this tool when the customer asks to view their tickets,
-        especially open or active tickets.
         """
+
+        # This tool is for customers
+        if user_role != UserRole.CUSTOMER:
+            return {
+                "success": False,
+                "message": "This tool is only available to customers."
+            }
+
         tickets = ticket_service.get_customer_tickets(
-            customer_id,
+            user_id,
             db
         )
 
         return {
             "success": True,
-            "tickets": [_ticket_to_dict(ticket) for ticket in tickets]
+            "tickets": [
+                _ticket_to_dict(ticket)
+                for ticket in tickets
+            ]
         }
 
     @tool
     def get_ticket_details(ticket_id: int):
         """
-        Get the details of a specific support ticket.
-
-        Use this tool when the user asks about a specific ticket.
+        Get details of a specific ticket.
         """
+
         ticket = ticket_service.get_ticket(
             ticket_id,
+            user_id,
+            user_role,
             db
         )
 
@@ -72,24 +84,29 @@ def build_tools(db: Session, customer_id: int):
         subject: str,
         description: str,
         category: str,
-        priority: str = "Medium",
+        priority: str = "Medium"
     ):
         """
         Create a new support ticket.
-
-        Only use this tool when the user explicitly asks to create a ticket.
         """
+
+        # Only customers should create tickets
+        if user_role != UserRole.CUSTOMER:
+            return {
+                "success": False,
+                "message": "Only customers can create tickets."
+            }
 
         ticket_data = TicketCreate(
             subject=subject,
             description=description,
             category=category,
-            priority=priority,
+            priority=priority
         )
 
         ticket = ticket_service.create_ticket(
             ticket_data,
-            customer_id,
+            user_id,
             db
         )
 
@@ -102,10 +119,13 @@ def build_tools(db: Session, customer_id: int):
     @tool
     def check_ticket_status(ticket_id: int):
         """
-        Check the current status of a specific support ticket.
+        Check the current status of a ticket.
         """
+
         ticket = ticket_service.get_ticket(
             ticket_id,
+            user_id,
+            user_role,
             db
         )
 
@@ -113,31 +133,29 @@ def build_tools(db: Session, customer_id: int):
             "success": True,
             "ticket_id": ticket.id,
             "status": ticket.status.value,
-            "priority": ticket.priority.value,
+            "priority": ticket.priority.value
         }
 
     @tool
     def update_ticket(
         ticket_id: int,
         priority: str | None = None,
-        status: str | None = None,
+        status: str | None = None
     ):
         """
-        Update permitted information for a support ticket.
-
-        Allowed updates currently include priority and status.
-        Authorization must be checked by the backend service.
-        Only use this tool when the user explicitly requests an update.
+        Update ticket priority or status.
         """
 
         ticket_data = TicketUpdate(
             priority=priority,
-            status=status,
+            status=status
         )
 
         ticket = ticket_service.update_ticket(
             ticket_id,
             ticket_data,
+            user_id,
+            user_role,
             db
         )
 
@@ -150,9 +168,7 @@ def build_tools(db: Session, customer_id: int):
     @tool
     def escalate_ticket(ticket_id: int):
         """
-        Escalate a support ticket when escalation is required.
-
-        Escalation is handled by changing the ticket priority to Critical.
+        Escalate a ticket by changing its priority to Critical.
         """
 
         ticket_data = TicketUpdate(
@@ -162,6 +178,8 @@ def build_tools(db: Session, customer_id: int):
         ticket = ticket_service.update_ticket(
             ticket_id,
             ticket_data,
+            user_id,
+            user_role,
             db
         )
 
@@ -177,5 +195,5 @@ def build_tools(db: Session, customer_id: int):
         create_ticket,
         check_ticket_status,
         update_ticket,
-        escalate_ticket,
+        escalate_ticket
     ]
