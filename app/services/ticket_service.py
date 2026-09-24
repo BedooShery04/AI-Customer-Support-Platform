@@ -8,21 +8,59 @@ from app.schemas.ticket import TicketCreate, TicketUpdate
 
 # =========================================================
 # Get all tickets
+# Admin only
 # =========================================================
 
-def get_all_tickets(db: Session):
+def get_all_tickets(
+    user_role: UserRole,
+    db: Session
+):
+    """
+    Get all tickets.
+
+    Only Admins are allowed to view all tickets.
+    """
+
+    if user_role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=403,
+            detail="Only admins can view all tickets"
+        )
+
     tickets = db.query(Ticket).all()
+
     return tickets
 
 
 # =========================================================
 # Get customer's tickets
+# Customer only
 # =========================================================
 
 def get_customer_tickets(
     customer_id: int,
+    user_id: int,
+    user_role: UserRole,
     db: Session
 ):
+    """
+    Get tickets belonging to the current customer.
+    """
+
+    if user_role != UserRole.CUSTOMER:
+        raise HTTPException(
+            status_code=403,
+            detail="Only customers can access customer tickets"
+        )
+
+    # Make sure the requested customer_id
+    # belongs to the logged-in customer.
+    if customer_id != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not allowed to access these tickets"
+        )
+
     tickets = (
         db.query(Ticket)
         .filter(Ticket.customer_id == customer_id)
@@ -34,12 +72,33 @@ def get_customer_tickets(
 
 # =========================================================
 # Get agent's assigned tickets
+# Agent only
 # =========================================================
 
 def get_agent_tickets(
     agent_id: int,
+    user_id: int,
+    user_role: UserRole,
     db: Session
 ):
+    """
+    Get tickets assigned to the current support agent.
+    """
+
+    if user_role != UserRole.AGENT:
+        raise HTTPException(
+            status_code=403,
+            detail="Only agents can access assigned tickets"
+        )
+
+    # Make sure the requested agent_id
+    # belongs to the logged-in agent.
+    if agent_id != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="You are not allowed to access these tickets"
+        )
+
     tickets = (
         db.query(Ticket)
         .filter(Ticket.assigned_agent_id == agent_id)
@@ -59,6 +118,10 @@ def get_ticket(
     user_role: UserRole,
     db: Session
 ):
+    """
+    Get one specific ticket according to the user's role.
+    """
+
     ticket = (
         db.query(Ticket)
         .filter(Ticket.id == ticket_id)
@@ -71,12 +134,19 @@ def get_ticket(
             detail="Ticket not found"
         )
 
-    # Admin can view any ticket
+    # -----------------------------------------------------
+    # Admin
+    # -----------------------------------------------------
+
     if user_role == UserRole.ADMIN:
         return ticket
 
-    # Customer can view only their own tickets
+    # -----------------------------------------------------
+    # Customer
+    # -----------------------------------------------------
+
     if user_role == UserRole.CUSTOMER:
+
         if ticket.customer_id != user_id:
             raise HTTPException(
                 status_code=403,
@@ -85,8 +155,12 @@ def get_ticket(
 
         return ticket
 
-    # Agent can view only assigned tickets
+    # -----------------------------------------------------
+    # Agent
+    # -----------------------------------------------------
+
     if user_role == UserRole.AGENT:
+
         if ticket.assigned_agent_id != user_id:
             raise HTTPException(
                 status_code=403,
@@ -94,6 +168,10 @@ def get_ticket(
             )
 
         return ticket
+
+    # -----------------------------------------------------
+    # Unknown role
+    # -----------------------------------------------------
 
     raise HTTPException(
         status_code=403,
@@ -103,15 +181,27 @@ def get_ticket(
 
 # =========================================================
 # Create a new ticket
+# Customer only
 # =========================================================
 
 def create_ticket(
     ticket_data: TicketCreate,
-    customer_id: int,
+    user_id: int,
+    user_role: UserRole,
     db: Session
 ):
+    """
+    Create a new ticket for the current customer.
+    """
+
+    if user_role != UserRole.CUSTOMER:
+        raise HTTPException(
+            status_code=403,
+            detail="Only customers can create tickets"
+        )
+
     new_ticket = Ticket(
-        customer_id=customer_id,
+        customer_id=user_id,
         subject=ticket_data.subject,
         description=ticket_data.description,
         category=ticket_data.category,
@@ -127,6 +217,7 @@ def create_ticket(
 
 # =========================================================
 # Update ticket
+# Agent and Admin
 # =========================================================
 
 def update_ticket(
@@ -136,6 +227,19 @@ def update_ticket(
     user_role: UserRole,
     db: Session
 ):
+    """
+    Update a ticket.
+
+    Admin:
+        Can update any ticket.
+
+    Agent:
+        Can update only tickets assigned to them.
+
+    Customer:
+        Cannot update tickets.
+    """
+
     ticket = (
         db.query(Ticket)
         .filter(Ticket.id == ticket_id)
@@ -148,7 +252,10 @@ def update_ticket(
             detail="Ticket not found"
         )
 
-    # Only Agent and Admin can update tickets
+    # -----------------------------------------------------
+    # Check role
+    # -----------------------------------------------------
+
     if user_role not in (
         UserRole.AGENT,
         UserRole.ADMIN
@@ -158,15 +265,21 @@ def update_ticket(
             detail="You are not allowed to update tickets"
         )
 
+    # -----------------------------------------------------
     # Agent can update only assigned tickets
-    if (
-        user_role == UserRole.AGENT
-        and ticket.assigned_agent_id != user_id
-    ):
-        raise HTTPException(
-            status_code=403,
-            detail="You are not allowed to update this ticket"
-        )
+    # -----------------------------------------------------
+
+    if user_role == UserRole.AGENT:
+
+        if ticket.assigned_agent_id != user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="You are not allowed to update this ticket"
+            )
+
+    # -----------------------------------------------------
+    # Update fields
+    # -----------------------------------------------------
 
     if ticket_data.subject is not None:
         ticket.subject = ticket_data.subject
@@ -184,11 +297,7 @@ def update_ticket(
         ticket.status = ticket_data.status
 
     if ticket_data.assigned_agent_id is not None:
-
-        # Assignment is handled by authorized users.
-        ticket.assigned_agent_id = (
-            ticket_data.assigned_agent_id
-        )
+        ticket.assigned_agent_id = ticket_data.assigned_agent_id
 
     db.commit()
     db.refresh(ticket)
@@ -198,6 +307,7 @@ def update_ticket(
 
 # =========================================================
 # Delete ticket
+# Admin only
 # =========================================================
 
 def delete_ticket(
@@ -205,6 +315,18 @@ def delete_ticket(
     user_role: UserRole,
     db: Session
 ):
+    """
+    Delete a ticket.
+
+    Only Admins are allowed to delete tickets.
+    """
+
+    if user_role != UserRole.ADMIN:
+        raise HTTPException(
+            status_code=403,
+            detail="Only admins can delete tickets"
+        )
+
     ticket = (
         db.query(Ticket)
         .filter(Ticket.id == ticket_id)
@@ -215,13 +337,6 @@ def delete_ticket(
         raise HTTPException(
             status_code=404,
             detail="Ticket not found"
-        )
-
-    # Only Admin can delete tickets
-    if user_role != UserRole.ADMIN:
-        raise HTTPException(
-            status_code=403,
-            detail="Only admins can delete tickets"
         )
 
     db.delete(ticket)
