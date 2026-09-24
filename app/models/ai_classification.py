@@ -18,13 +18,12 @@ class TicketAIClassification(Base):
 
     id: Mapped[int] = mapped_column(
         Integer,
-        primary_key=True,
-        index=True
+        primary_key=True
     )
 
     ticket_id: Mapped[int] = mapped_column(
         Integer,
-        ForeignKey("tickets.id"),
+        ForeignKey("tickets.id", ondelete='CASCADE'),
         nullable=False,
         unique=True
     )

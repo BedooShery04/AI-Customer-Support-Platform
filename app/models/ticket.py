@@ -11,7 +11,6 @@ from sqlalchemy import (
     Text,
     Index
 )
-
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.enums import (
     TicketCategory,
@@ -24,24 +23,28 @@ from app.database.base_class import Base
 class Ticket(Base):
     __tablename__ = "tickets"
 
+    __table_args__ = (
+        Index("idx_tickets_assigned_agent_id", "assigned_agent_id"),
+        Index("idx_tickets_customer_id", "customer_id"),
+        Index("idx_tickets_priority", "priority"),
+        Index('idx_tickets_status', "status")
+    )
+
     id: Mapped[int] = mapped_column(
         Integer,
-        primary_key=True,
-        index=True
+        primary_key=True
     )
 
     customer_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("users.id"),
-        nullable=False,
-        
+        nullable=False
     )
 
     assigned_agent_id: Mapped[int | None] = mapped_column(
         Integer,
         ForeignKey("users.id"),
-        nullable=True,
-        
+        nullable=True
     )
 
     subject: Mapped[str] = mapped_column(
@@ -70,8 +73,7 @@ class Ticket(Base):
             values_callable=lambda enum_class: [item.value for item in enum_class]
         ),
         nullable=False,
-        default=TicketPriority.MEDIUM,
-        
+        default=TicketPriority.MEDIUM
     )
 
     status: Mapped[TicketStatus] = mapped_column(

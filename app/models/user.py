@@ -5,7 +5,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.enums import UserRole
 from app.database.base_class import Base
-from sqlalchemy import DateTime, Enum as SQLEnum, Integer, String
 
 
 class User(Base):
@@ -13,8 +12,7 @@ class User(Base):
 
     id: Mapped[int] = mapped_column(
         Integer,
-        primary_key=True,
-        index=True
+        primary_key=True
     )
 
     name: Mapped[str] = mapped_column(
@@ -25,8 +23,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(
         String(255),
         unique=True,
-        nullable=False,
-        index=True
+        nullable=False
     )
 
     password_hash: Mapped[str] = mapped_column(
