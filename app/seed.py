@@ -19,6 +19,21 @@ def create_user_if_not_exists(
 
     if existing_user:
         print(f"{email} already exists.")
+
+        # Update existing user for local/dev testing
+        existing_user.name = name
+        existing_user.password_hash = hash_password(password)
+        existing_user.role = role
+        existing_user.status = UserStatus.ACTIVE
+
+        db.commit()
+        db.refresh(existing_user)
+
+        print(
+            f"Updated {role.value}: "
+            f"{existing_user.email} (ID: {existing_user.id})"
+        )
+
         return
 
     user = User(
@@ -37,7 +52,6 @@ def create_user_if_not_exists(
         f"Created {role.value}: "
         f"{user.email} (ID: {user.id})"
     )
-
 
 def main():
     db = SessionLocal()

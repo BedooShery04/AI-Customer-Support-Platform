@@ -35,13 +35,16 @@ def build_tools(
     Build the tools for the current authenticated user.
     """
 
+    # =========================================================
+    # 1 Get Customer Tickets
+    # =========================================================
+
     @tool
     def get_customer_tickets():
         """
         Get the tickets belonging to the current customer.
         """
 
-        # This tool is for customers
         if user_role != UserRole.CUSTOMER:
             return {
                 "success": False,
@@ -49,8 +52,10 @@ def build_tools(
             }
 
         tickets = ticket_service.get_customer_tickets(
-            user_id,
-            db
+            customer_id=user_id,
+            user_id=user_id,
+            user_role=user_role,
+            db=db
         )
 
         return {
@@ -61,6 +66,10 @@ def build_tools(
             ]
         }
 
+    # =========================================================
+    # 2 Get Ticket Details
+    # =========================================================
+
     @tool
     def get_ticket_details(ticket_id: int):
         """
@@ -68,16 +77,20 @@ def build_tools(
         """
 
         ticket = ticket_service.get_ticket(
-            ticket_id,
-            user_id,
-            user_role,
-            db
+            ticket_id=ticket_id,
+            user_id=user_id,
+            user_role=user_role,
+            db=db
         )
 
         return {
             "success": True,
             "ticket": _ticket_to_dict(ticket)
         }
+
+    # =========================================================
+    # 3 Create Ticket
+    # =========================================================
 
     @tool
     def create_ticket(
@@ -90,7 +103,6 @@ def build_tools(
         Create a new support ticket.
         """
 
-        # Only customers should create tickets
         if user_role != UserRole.CUSTOMER:
             return {
                 "success": False,
@@ -105,9 +117,10 @@ def build_tools(
         )
 
         ticket = ticket_service.create_ticket(
-            ticket_data,
-            user_id,
-            db
+            ticket_data=ticket_data,
+            user_id=user_id,
+            user_role=user_role,
+            db=db
         )
 
         return {
@@ -116,6 +129,10 @@ def build_tools(
             "ticket": _ticket_to_dict(ticket)
         }
 
+    # =========================================================
+    # 4 Check Ticket Status
+    # =========================================================
+
     @tool
     def check_ticket_status(ticket_id: int):
         """
@@ -123,10 +140,10 @@ def build_tools(
         """
 
         ticket = ticket_service.get_ticket(
-            ticket_id,
-            user_id,
-            user_role,
-            db
+            ticket_id=ticket_id,
+            user_id=user_id,
+            user_role=user_role,
+            db=db
         )
 
         return {
@@ -135,6 +152,10 @@ def build_tools(
             "status": ticket.status.value,
             "priority": ticket.priority.value
         }
+
+    # =========================================================
+    # 5 Update Ticket
+    # =========================================================
 
     @tool
     def update_ticket(
@@ -152,11 +173,11 @@ def build_tools(
         )
 
         ticket = ticket_service.update_ticket(
-            ticket_id,
-            ticket_data,
-            user_id,
-            user_role,
-            db
+            ticket_id=ticket_id,
+            ticket_data=ticket_data,
+            user_id=user_id,
+            user_role=user_role,
+            db=db
         )
 
         return {
@@ -164,6 +185,10 @@ def build_tools(
             "message": "Ticket updated successfully.",
             "ticket": _ticket_to_dict(ticket)
         }
+
+    # =========================================================
+    # 6. Escalate Ticket
+    # =========================================================
 
     @tool
     def escalate_ticket(ticket_id: int):
@@ -176,11 +201,11 @@ def build_tools(
         )
 
         ticket = ticket_service.update_ticket(
-            ticket_id,
-            ticket_data,
-            user_id,
-            user_role,
-            db
+            ticket_id=ticket_id,
+            ticket_data=ticket_data,
+            user_id=user_id,
+            user_role=user_role,
+            db=db
         )
 
         return {
