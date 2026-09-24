@@ -1,5 +1,3 @@
-# app/agent/graph.py
-
 import os
 
 from langchain_core.messages import SystemMessage
@@ -9,7 +7,7 @@ from langgraph.graph import START, END, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode
 
 from app.agent.prompts import AGENT_SYSTEM_PROMPT
-from app.agent.tools import AGENT_TOOLS
+from app.agent.tools import build_tools
 
 
 # =========================================================
@@ -23,87 +21,107 @@ model = ChatGroq(
 
 
 # =========================================================
-# 2) Bind the tools to the LLM
+# 2) Build the Agent Graph
 # =========================================================
 
-model_with_tools = model.bind_tools(AGENT_TOOLS)
-
-
-# =========================================================
-# 3) Agent Node
-# =========================================================
-
-def call_model(state: MessagesState):
+def build_graph(db, customer_id: int):
     """
-    Send the conversation to the LLM.
+    Build the LangGraph workflow for the current customer.
 
-    The model receives:
-    - system instructions
-    - conversation history
-    - available tools
+    The database session and customer_id are provided by
+    the application, not by the LLM.
     """
 
-    messages = [
-        SystemMessage(content=AGENT_SYSTEM_PROMPT),
-        *state["messages"],
-    ]
+    # Build tools for the current user
+    agent_tools = build_tools(
+        db=db,
+        customer_id=customer_id,
+    )
 
-    response = model_with_tools.invoke(messages)
+    # Bind tools to the LLM
+    model_with_tools = model.bind_tools(agent_tools)
 
-    return {
-        "messages": [response]
-    }
+    # =====================================================
+    # 3) Agent Node
+    # =====================================================
 
+    def call_model(state: MessagesState):
+        """
+        Send the conversation to the LLM.
 
-# =========================================================
-# 4) Decide where to go next
-# =========================================================
+        The model receives:
+        - system instructions
+        - conversation history
+        - available tools
+        """
 
-def should_continue(state: MessagesState):
-    """
-    Decide whether the LLM wants to call a tool
-    or has already generated the final answer.
-    """
+        messages = [
+            SystemMessage(content=AGENT_SYSTEM_PROMPT),
+            *state["messages"],
+        ]
 
-    last_message = state["messages"][-1]
+        response = model_with_tools.invoke(messages)
 
-    if getattr(last_message, "tool_calls", None):
-        return "tools"
+        return {
+            "messages": [response]
+        }
 
-    return END
+    # =====================================================
+    # 4) Decide where to go next
+    # =====================================================
 
+    def should_continue(state: MessagesState):
+        """
+        Decide whether the LLM wants to call a tool
+        or has already generated the final answer.
+        """
 
-# =========================================================
-# 5) Build the Graph
-# =========================================================
+        last_message = state["messages"][-1]
 
-builder = StateGraph(MessagesState)
+        if getattr(last_message, "tool_calls", None):
+            return "tools"
 
-# Agent / LLM node
-builder.add_node("agent", call_model)
+        return END
 
-# Tool execution node
-builder.add_node("tools", ToolNode(AGENT_TOOLS))
+    # =====================================================
+    # 5) Build the Graph
+    # =====================================================
 
-# Start -> Agent
-builder.add_edge(START, "agent")
+    builder = StateGraph(MessagesState)
 
-# Agent -> Tools OR END
-builder.add_conditional_edges(
-    "agent",
-    should_continue,
-    {
-        "tools": "tools",
-        END: END,
-    },
-)
+    # Agent / LLM node
+    builder.add_node("agent", call_model)
 
-# After executing tools -> Agent
-builder.add_edge("tools", "agent")
+    # Tool execution node
+    builder.add_node(
+        "tools",
+        ToolNode(agent_tools)
+    )
 
+    # Start -> Agent
+    builder.add_edge(
+        START,
+        "agent"
+    )
 
-# =========================================================
-# 6) Compile the graph
-# =========================================================
+    # Agent -> Tools OR END
+    builder.add_conditional_edges(
+        "agent",
+        should_continue,
+        {
+            "tools": "tools",
+            END: END,
+        },
+    )
 
-graph = builder.compile()
+    # After executing tools -> Agent
+    builder.add_edge(
+        "tools",
+        "agent"
+    )
+
+    # =====================================================
+    # 6) Compile the Graph
+    # =====================================================
+
+    return builder.compile()
