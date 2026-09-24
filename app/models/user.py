@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, Integer, String, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.enums import UserRole
+from app.enums.user import UserRole, UserStatus
 from app.database.base_class import Base
 
 
@@ -47,10 +47,14 @@ class User(Base):
         default=datetime.utcnow
     )
 
-    status: Mapped[str] = mapped_column(
-        String(20),
+    status: Mapped[UserStatus] = mapped_column(
+        SQLEnum(
+            UserStatus,
+            name="user_status",
+            values_callable=lambda enum_class: [item.value for item in enum_class]
+        ),
         nullable=False,
-        default="active"
+        default=UserStatus.ACTIVE
     )
 
     # Customer -> Tickets

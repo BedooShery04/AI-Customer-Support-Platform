@@ -2,14 +2,13 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr
 
-from app.enums import UserRole
+from app.enums.user import UserRole, UserStatus
 
 
 class UserCreate(BaseModel):
     name: str
     email: EmailStr
     password: str
-    role: UserRole = UserRole.CUSTOMER
 
 
 class UserLogin(BaseModel):
@@ -23,6 +22,6 @@ class UserResponse(BaseModel):
     email: EmailStr
     role: UserRole
     created_at: datetime
-    status: str
+    status: UserStatus
 
     model_config = ConfigDict(from_attributes=True)
