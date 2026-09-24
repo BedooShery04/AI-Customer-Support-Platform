@@ -2,14 +2,22 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
 from app.database.database import get_db
+
 from app.dependencies.auth import get_current_user
-from app.dependencies.roles import require_admin
+from app.dependencies.roles import (
+    require_admin,
+    require_agent,
+    require_customer,
+)
+
 from app.models.user import User
+
 from app.schemas.ticket import (
     TicketCreate,
     TicketUpdate,
     TicketResponse,
 )
+
 from app.services.ticket_service import (
     create_ticket,
     get_all_tickets,
@@ -27,6 +35,11 @@ router = APIRouter(
 )
 
 
+# =========================================================
+# Create a new ticket
+# Customer only
+# =========================================================
+
 @router.post(
     "",
     response_model=TicketResponse,
@@ -34,7 +47,7 @@ router = APIRouter(
 )
 def create_new_ticket(
     ticket_data: TicketCreate,
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
     db: Session = Depends(get_db)
 ):
     return create_ticket(
@@ -44,6 +57,11 @@ def create_new_ticket(
         db=db
     )
 
+
+# =========================================================
+# Get all tickets
+# Admin only
+# =========================================================
 
 @router.get(
     "",
@@ -59,12 +77,17 @@ def get_all(
     )
 
 
+# =========================================================
+# Get my tickets
+# Customer only
+# =========================================================
+
 @router.get(
     "/my",
     response_model=list[TicketResponse]
 )
 def get_my_tickets(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_customer),
     db: Session = Depends(get_db)
 ):
     return get_customer_tickets(
@@ -75,12 +98,17 @@ def get_my_tickets(
     )
 
 
+# =========================================================
+# Get my assigned tickets
+# Agent only
+# =========================================================
+
 @router.get(
     "/assigned",
     response_model=list[TicketResponse]
 )
 def get_my_assigned_tickets(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_agent),
     db: Session = Depends(get_db)
 ):
     return get_agent_tickets(
@@ -90,6 +118,11 @@ def get_my_assigned_tickets(
         db=db
     )
 
+
+# =========================================================
+# Get one specific ticket
+# Customer / Agent / Admin
+# =========================================================
 
 @router.get(
     "/{ticket_id}",
@@ -107,6 +140,11 @@ def get_single_ticket(
         db=db
     )
 
+
+# =========================================================
+# Update a ticket
+# Agent / Admin
+# =========================================================
 
 @router.put(
     "/{ticket_id}",
@@ -126,6 +164,11 @@ def update_existing_ticket(
         db=db
     )
 
+
+# =========================================================
+# Delete a ticket
+# Admin only
+# =========================================================
 
 @router.delete(
     "/{ticket_id}",
