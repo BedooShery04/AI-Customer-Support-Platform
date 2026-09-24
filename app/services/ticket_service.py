@@ -1,7 +1,8 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.enums import UserRole
+from app.models.user import User
+from app.enums.user import UserRole, UserStatus
 from app.models.ticket import Ticket
 from app.schemas.ticket import TicketCreate, TicketUpdate
 
@@ -321,11 +322,33 @@ def update_ticket(
     # -----------------------------------------------------
 
     if user_role == UserRole.ADMIN:
-
         if ticket_data.assigned_agent_id is not None:
-            ticket.assigned_agent_id = (
-                ticket_data.assigned_agent_id
+
+            agent = (
+                db.query(User)
+                .filter(User.id == ticket_data.assigned_agent_id)
+                .first()
             )
+
+            if agent is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Agent not found"
+                )
+
+            if agent.role != UserRole.AGENT:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Selected user is not an agent"
+                )
+
+            if agent.status != UserStatus.ACTIVE:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Selected agent is inactive"
+                )
+
+            ticket.assigned_agent_id = agent.id
 
     # -----------------------------------------------------
     # 6. Save changes

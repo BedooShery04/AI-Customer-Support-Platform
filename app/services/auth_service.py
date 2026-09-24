@@ -162,5 +162,5 @@ def decode_access_token(token: str) -> dict | None:
 
         return payload
 
-    except JWTError:
+    except JWTError as e:
         return None
