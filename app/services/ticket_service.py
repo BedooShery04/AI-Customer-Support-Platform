@@ -232,13 +232,19 @@ def update_ticket(
 
     Admin:
         Can update any ticket.
+        Can assign/reassign the ticket to an agent.
 
     Agent:
         Can update only tickets assigned to them.
+        Cannot change the assigned agent.
 
     Customer:
         Cannot update tickets.
     """
+
+    # -----------------------------------------------------
+    # 1. Get ticket
+    # -----------------------------------------------------
 
     ticket = (
         db.query(Ticket)
@@ -253,8 +259,14 @@ def update_ticket(
         )
 
     # -----------------------------------------------------
-    # Check role
+    # 2. Check role
     # -----------------------------------------------------
+
+    if user_role == UserRole.CUSTOMER:
+        raise HTTPException(
+            status_code=403,
+            detail="Customers are not allowed to update tickets"
+        )
 
     if user_role not in (
         UserRole.AGENT,
@@ -266,19 +278,27 @@ def update_ticket(
         )
 
     # -----------------------------------------------------
-    # Agent can update only assigned tickets
+    # 3. Agent permission
     # -----------------------------------------------------
 
     if user_role == UserRole.AGENT:
 
+        # Agent can only update tickets assigned to them
         if ticket.assigned_agent_id != user_id:
             raise HTTPException(
                 status_code=403,
                 detail="You are not allowed to update this ticket"
             )
 
+        # Agent cannot assign/reassign tickets
+        if ticket_data.assigned_agent_id is not None:
+            raise HTTPException(
+                status_code=403,
+                detail="Agents cannot assign or reassign tickets"
+            )
+
     # -----------------------------------------------------
-    # Update fields
+    # 4. Update common fields
     # -----------------------------------------------------
 
     if ticket_data.subject is not None:
@@ -296,8 +316,20 @@ def update_ticket(
     if ticket_data.status is not None:
         ticket.status = ticket_data.status
 
-    if ticket_data.assigned_agent_id is not None:
-        ticket.assigned_agent_id = ticket_data.assigned_agent_id
+    # -----------------------------------------------------
+    # 5. Admin-only assignment
+    # -----------------------------------------------------
+
+    if user_role == UserRole.ADMIN:
+
+        if ticket_data.assigned_agent_id is not None:
+            ticket.assigned_agent_id = (
+                ticket_data.assigned_agent_id
+            )
+
+    # -----------------------------------------------------
+    # 6. Save changes
+    # -----------------------------------------------------
 
     db.commit()
     db.refresh(ticket)

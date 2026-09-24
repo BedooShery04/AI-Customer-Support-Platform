@@ -22,6 +22,7 @@ class TicketUpdate(BaseModel):
     category: TicketCategory | None = None
     priority: TicketPriority | None = None
     status: TicketStatus | None = None
+    assigned_agent_id: int | None = None
 
 
 class TicketResponse(BaseModel):
