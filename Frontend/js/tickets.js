@@ -24,15 +24,24 @@ export function renderStatCards(container, stats, cards) {
 }
 
 export function ticketDetailsPath(role, ticketId) {
+    const id = encodeURIComponent(ticketId);
+
     if (role === "customer") {
-        return `/customer/ticket-details.html?id=${encodeURIComponent(ticketId)}`;
+        return new URL(
+            `../customer/ticket-details.html?id=${id}`,
+            import.meta.url
+        ).href;
     }
+
     if (role === "agent") {
-        return `/agent/ticket-details.html?id=${encodeURIComponent(ticketId)}`;
+        return new URL(
+            `../agent/ticket-details.html?id=${id}`,
+            import.meta.url
+        ).href;
     }
+
     return "#";
 }
-
 export function renderTicketTable(
     container,
     tickets,
@@ -105,6 +114,14 @@ export function getQueryTicketId() {
 
 export function filterTickets(tickets, filters) {
     return tickets.filter((ticket) =>
-        Object.entries(filters).every(([key, value]) => !value || ticket[key] === value),
+        Object.entries(filters).every(([key, value]) => {
+            if (!value) return true;
+
+            if (key === "assignedAgentId") {
+                return String(ticket[key] ?? "") === String(value);
+            }
+
+            return ticket[key] === value;
+        })
     );
 }

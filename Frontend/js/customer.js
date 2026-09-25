@@ -141,7 +141,6 @@ async function submitTicketPayload(payload, { form, button, redirect = true } = 
       form.reset();
     }
     showToast("Ticket created successfully.");
-    if (ticket.classificationWarning) showToast(ticket.classificationWarning, "error");
     if (redirect) {
       window.setTimeout(() => {
         window.location.href = `/customer/ticket-details.html?id=${encodeURIComponent(ticket.id)}`;

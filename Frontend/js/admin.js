@@ -70,9 +70,23 @@ export async function initAdminDashboard() {
   const aiContainer = document.querySelector("#ai-activity");
   [statsContainer, recentContainer, activityContainer, aiContainer].forEach(element => renderState(element,"loading","Loading data..."));
   try {
-    const dashboard = await getDashboardStats();
-    const tickets = dashboard.recentTickets;
-    renderStatCards(statsContainer, dashboard, adminCards);
+    const [dashboard, users] = await Promise.all([
+      getDashboardStats(),
+      getUsers()
+    ]);
+
+    const usersById = new Map(
+      users.map(user => [String(user.id), user])
+    );
+
+    const tickets = dashboard.recentTickets.map(ticket => ({
+      ...ticket,
+      customer: usersById.get(String(ticket.customerId)) ?? null,
+      assignedAgent: ticket.assignedAgentId != null
+        ? usersById.get(String(ticket.assignedAgentId)) ?? null
+        : null
+    }));
+        renderStatCards(statsContainer, dashboard, adminCards);
     if (tickets.length) {
       renderTicketTable(recentContainer,tickets,{role:ROLES.ADMIN,showCustomer:true,showAgent:true,compact:true,
         actionRenderer: ticket => `<button class="table-link button-link" data-view-ticket="${ticket.id}">View</button>`});
@@ -122,7 +136,7 @@ function renderUserTable(container, users, { agentCounts = null } = {}) {
           <td><div class="row-actions">
             <button class="table-link button-link" data-user-action="view" data-user-id="${user.id}">View</button>
             <button class="table-link button-link" data-user-action="toggle" data-user-id="${user.id}">${
-              user.status === "Active" ? "Disable" : "Enable"
+              user.status === "active" ? "Disable" : "Enable"
             }</button>
             <button class="table-link button-link table-link--danger" data-user-action="delete" data-user-id="${user.id}">Delete</button>
           </div></td>
@@ -135,7 +149,9 @@ function renderUserTable(container, users, { agentCounts = null } = {}) {
 async function bindUserActions(container, users, reload, agentCounts = null) {
   container.querySelectorAll("[data-user-action]").forEach((button) => {
     button.addEventListener("click", async () => {
-      const user = users.find((item) => item.id === button.dataset.userId);
+      const user = users.find(
+      (item) => String(item.id) === button.dataset.userId
+    );
       if (!user) return;
       const action = button.dataset.userAction;
       if (action === "view") {
@@ -158,21 +174,31 @@ async function bindUserActions(container, users, reload, agentCounts = null) {
         return;
       }
       if (action === "toggle") {
-        const nextStatus = user.status === "Active" ? "Disabled" : "Active";
+        const nextStatus =
+          user.status === "active" ? "inactive" : "active";
+
+        const enabling = nextStatus === "active";
+
         const confirmed = await openConfirmDialog({
-          title: `${nextStatus === "Active" ? "Enable" : "Disable"} account?`,
-          message: `${user.name}'s account will be marked ${nextStatus.toLowerCase()}.`,
-          confirmLabel: nextStatus === "Active" ? "Enable" : "Disable",
-          danger: nextStatus === "Disabled",
+          title: `${enabling ? "Enable" : "Disable"} account?`,
+          message: `${user.name}'s account will be marked ${nextStatus}.`,
+          confirmLabel: enabling ? "Enable" : "Disable",
+          danger: !enabling,
         });
+
         if (!confirmed) return;
+
         try {
           await updateUser(user.id, { status: nextStatus });
-          showToast(`Account ${nextStatus.toLowerCase()}.`);
+          showToast(`Account ${nextStatus}.`);
           await reload();
         } catch (error) {
-          showToast(error.message || "Unable to update the account.", "error");
+          showToast(
+            error.message || "Unable to update the account.",
+            "error"
+          );
         }
+
         return;
       }
       const confirmed = await openConfirmDialog({
@@ -264,16 +290,48 @@ function ticketDetailsContent(ticket) {
 
 function bindViewTicketButtons(container, tickets) {
   container.querySelectorAll("[data-view-ticket]").forEach(button => {
-    button.addEventListener("click",async () => {
-      setButtonBusy(button,true,"Loading...");
+    button.addEventListener("click", async () => {
+      setButtonBusy(button, true, "Loading...");
+
       try {
-        const [ticket,messages] = await Promise.all([getTicketById(button.dataset.viewTicket),getTicketMessages(button.dataset.viewTicket)]);
+        const ticketId = button.dataset.viewTicket;
+
+        const [fetchedTicket, messages] = await Promise.all([
+          getTicketById(ticketId),
+          getTicketMessages(ticketId)
+        ]);
+
+        // بيانات الأسماء اللي جهزناها بالفعل في جدول الـ Admin
+        const tableTicket = tickets.find(
+          item => String(item.id) === String(ticketId)
+        );
+
+        const ticket = {
+          ...fetchedTicket,
+          customer: tableTicket?.customer ?? fetchedTicket.customer,
+          assignedAgent:
+            tableTicket?.assignedAgent ?? fetchedTicket.assignedAgent
+        };
+
         const conversation = document.createElement("div");
-        renderMessages(conversation,messages);
-        openDetailsDialog({ title:ticket.subject,subtitle:ticket.id,
-          content:ticketDetailsContent(ticket)+`<h3>Conversation</h3><div class="ticket-conversation">${conversation.innerHTML}</div>` });
-      } catch(error) { showToast(error.message,"error"); }
-      finally { setButtonBusy(button,false); }
+        renderMessages(conversation, messages);
+
+        openDetailsDialog({
+          title: ticket.subject,
+          subtitle: String(ticket.id),
+          content:
+            ticketDetailsContent(ticket) +
+            `<h3>Conversation</h3>
+             <div class="ticket-conversation">
+               ${conversation.innerHTML}
+             </div>`
+        });
+
+      } catch (error) {
+        showToast(error.message, "error");
+      } finally {
+        setButtonBusy(button, false);
+      }
     });
   });
 }
@@ -294,7 +352,11 @@ function openTicketManagement(ticket, agents, onSaved) {
         (item) => `<option ${item === ticket.priority ? "selected" : ""}>${item}</option>`,
       ).join("")}</select></label>
       <label class="field"><span>Assigned Agent</span><select name="assignedAgentId"><option value="">Unassigned</option>${agents
-        .filter(agent => agent.status === "Active" || agent.id === ticket.assignedAgentId)
+        .filter(
+            agent =>
+              agent.status === "active" ||
+              String(agent.id) === String(ticket.assignedAgentId)
+          )
         .map(
           (agent) => `<option value="${agent.id}" ${
             agent.id === ticket.assignedAgentId ? "selected" : ""
@@ -381,7 +443,9 @@ export async function initAdminTickets() {
     }));
     container.querySelectorAll("[data-manage-ticket]").forEach((button) => {
       button.addEventListener("click", () => {
-        const ticket = tickets.find((item) => item.id === button.dataset.manageTicket);
+        const ticket = tickets.find(
+          (item) => String(item.id) === button.dataset.manageTicket
+        );
         if (ticket) openTicketManagement(ticket, agents, load);
       });
     });
@@ -390,7 +454,24 @@ export async function initAdminTickets() {
   const load = async () => {
     renderState(container, "loading", "Loading all tickets…");
     try {
-      [tickets, agents] = await Promise.all([getTickets(), getAgents()]);
+            const [loadedTickets, loadedUsers] = await Promise.all([
+          getTickets(),
+          getUsers()
+      ]);
+
+      agents = loadedUsers.filter(user => user.role === ROLES.AGENT);
+
+      const usersById = new Map(
+          loadedUsers.map(user => [String(user.id), user])
+      );
+
+      tickets = loadedTickets.map(ticket => ({
+          ...ticket,
+          customer: usersById.get(String(ticket.customerId)) ?? null,
+          assignedAgent: ticket.assignedAgentId != null
+              ? usersById.get(String(ticket.assignedAgentId)) ?? null
+              : null,
+      }));
       form.elements.assignedAgentId.innerHTML = `<option value="">All assigned agents</option>${agents
         .map((agent) => `<option value="${agent.id}">${escapeHTML(agent.name)}</option>`)
         .join("")}`;
@@ -425,13 +506,26 @@ export async function initStatistics() {
   const average = document.querySelector("#average-per-category");
   [stats,categories,statuses,agentsChart].forEach(element => renderState(element,"loading","Loading statistics..."));
   try {
-    const dashboard = await getDashboardStats();
+          const [dashboard, agents] = await Promise.all([
+          getDashboardStats(),
+          getAgents()
+      ]);
     renderStatCards(stats,dashboard,adminCards);
     renderBarChart(categories,Object.entries(dashboard.tickets_by_category || {}),dashboard.total);
     renderBarChart(statuses,Object.entries(dashboard.tickets_by_status || {}),dashboard.total);
-    const agentCounts = (dashboard.support_activity || []).map(a => [a.agent_name,a.assigned_tickets]);
-    const unassigned = dashboard.tickets_by_agent?.Unassigned || 0;
-    if (unassigned) agentCounts.push(["Unassigned",unassigned]);
+const agentCounts = agents.map(agent => [
+    agent.name,
+    dashboard.tickets_by_agent?.[String(agent.id)] || 0
+]);
+
+const unassigned =
+    dashboard.tickets_by_agent?.Unassigned || 0;
+
+if (unassigned) {
+    agentCounts.push(["Unassigned", unassigned]);
+}
+
+renderBarChart(agentsChart, agentCounts, dashboard.total);
     renderBarChart(agentsChart,agentCounts,dashboard.total);
     average.textContent = Number(dashboard.average_tickets_per_category || 0).toFixed(1);
   } catch(error) {

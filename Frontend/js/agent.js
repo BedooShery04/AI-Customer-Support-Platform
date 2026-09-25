@@ -2,7 +2,6 @@ import {
   changedTicketFields,
   getDashboardStats,
   generateAIResponseSuggestion,
-  getAgents,
   getTicketById,
   getTicketMessages,
   getTickets,
@@ -49,7 +48,7 @@ export async function initAgentDashboard(user) {
   renderState(recentContainer, "loading", "Loading assigned tickets…");
   try {
     const dashboard = await getDashboardStats();
-    const tickets = dashboard.recentTickets;
+    const tickets = (await getTickets()).slice(0, 5);
     renderStatCards(statsContainer, dashboard, agentCards);
     if (!tickets.length) {
       renderState(
@@ -251,24 +250,16 @@ export async function initAgentTicketDetails() {
   renderState(overview, "loading", "Loading ticket…");
   renderState(conversation, "loading", "Loading conversation…");
   try {
-    const [ticket, messages, agents] = await Promise.all([
+    const [ticket, messages] = await Promise.all([
       getTicketById(ticketId),
       getTicketMessages(ticketId),
-      getAgents(),
     ]);
     renderAgentTicketOverview(overview, ticket);
     renderMessages(conversation, messages);
 
     controls.elements.status.innerHTML = optionList(TICKET_STATUSES, ticket.status);
     controls.elements.priority.innerHTML = optionList(TICKET_PRIORITIES, ticket.priority);
-    controls.elements.assignedAgentId.innerHTML = `<option value="">Unassigned</option>${agents
-      .map(
-        (agent) =>
-          `<option value="${agent.id}" ${
-            agent.id === ticket.assignedAgentId ? "selected" : ""
-          }>${escapeHTML(agent.name)}</option>`,
-      )
-      .join("")}`;
+    
 
     controls.addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -277,20 +268,16 @@ export async function initAgentTicketDetails() {
       try {
         const changes = changedTicketFields(ticket, {
           status: controls.elements.status.value,
-          priority: controls.elements.priority.value,
-          assignedAgentId: controls.elements.assignedAgentId.value || null,
+          priority: controls.elements.priority.value
+          
         });
         if (!Object.keys(changes).length) {
           showToast("No changes to save.");
           return;
         }
-        const updated = await updateTicket(ticketId, changes);
-        showToast("Ticket controls updated.");
-        if (updated.assignedAgentId !== ticket.assignedAgentId) {
-          window.setTimeout(() => window.location.replace("/agent/assigned-tickets.html"), 450);
-        } else {
-          window.location.reload();
-        }
+      await updateTicket(ticketId, changes);
+      showToast("Ticket updated successfully.");
+      window.location.reload();
       } catch (updateError) {
         showToast(updateError.message || "Unable to update the ticket.", "error");
       } finally {

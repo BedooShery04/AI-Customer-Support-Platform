@@ -25,9 +25,18 @@ class TicketUpdate(BaseModel):
     assigned_agent_id: int | None = None
 
 
+class TicketCustomerInfo(BaseModel):
+    id: int
+    name: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+
 class TicketResponse(BaseModel):
     id: int
     customer_id: int
+    customer: TicketCustomerInfo | None = None
     assigned_agent_id: int | None
 
     subject: str

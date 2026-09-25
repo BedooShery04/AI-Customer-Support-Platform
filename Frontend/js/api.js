@@ -20,6 +20,7 @@ export function normalizeTicket(ticket) {
     const value = {
         ...ticket,
         customerId: ticket.customer_id ?? ticket.customerId,
+        customer: ticket.customer ?? null,
         assignedAgentId: ticket.assigned_agent_id ?? ticket.assignedAgentId ?? null,
         createdAt: ticket.created_at ?? ticket.createdAt,
         updatedAt: ticket.updated_at ?? ticket.updatedAt,
@@ -135,18 +136,18 @@ export const getTicketById = id => execute(m => m.getTicketById(id),
 
 export const classifyTicket = id => apiRequest("/ai/classify-ticket", { method: "POST", body: { ticket_id: id } });
 
-export const createTicket = payload => execute(m => m.createTicket(payload), async () => {
-    const created = await apiRequest("/tickets", { method: "POST", body: payload });
-    const ticket = normalizeTicket(created);
-    try {
-        const classification = await classifyTicket(created.id);
-        ticket.aiClassification = { summary: classification.short_summary, suggestedAction: classification.suggested_action };
-    } catch (error) {
-        // Ticket creation succeeded. A failed optional classification must not look like a failed create.
-        ticket.classificationWarning = "Ticket saved. AI classification is currently unavailable.";
+export const createTicket = payload =>
+  execute(
+    m => m.createTicket(payload),
+    async () => {
+      const created = await apiRequest("/tickets", {
+        method: "POST",
+        body: payload,
+      });
+
+      return normalizeTicket(created);
     }
-    return ticket;
-});
+  );
 
 export function changedTicketFields(original, values) {
     return Object.fromEntries(Object.entries(values).filter(([key, value]) => value !== original[key]));
@@ -250,13 +251,34 @@ export const getDashboardStats = () => execute(
         }
 
         const tickets = (await apiRequest(path)).map(normalizeTicket);
+        const countBy = (key) =>
+        tickets.reduce((counts, ticket) => {
+            const value = ticket[key] || "Unassigned";
+            counts[value] = (counts[value] || 0) + 1;
+            return counts;
+        }, {});
+
+        const ticketsByCategory = countBy("category");
+        const ticketsByStatus = countBy("status");
+        const ticketsByAgent = countBy("assignedAgentId");
+
+        const categoryCount = Object.keys(ticketsByCategory).length;
 
         return {
-        total: tickets.length,
-        open: tickets.filter(t => t.status === "Open").length,
-        inProgress: tickets.filter(t => t.status === "In Progress").length,
-        resolved: tickets.filter(t => t.status === "Resolved").length,
-        recentTickets: tickets.slice(0, 5),
+            total: tickets.length,
+            open: tickets.filter(t => t.status === "Open").length,
+            inProgress: tickets.filter(t => t.status === "In Progress").length,
+            resolved: tickets.filter(t => t.status === "Resolved").length,
+            critical: tickets.filter(t => t.priority === "Critical").length,
+
+            recentTickets: tickets.slice(0, 5),
+
+            tickets_by_category: ticketsByCategory,
+            tickets_by_status: ticketsByStatus,
+            tickets_by_agent: ticketsByAgent,
+
+            average_tickets_per_category:
+                categoryCount ? tickets.length / categoryCount : 0,
         };
     }
 );
