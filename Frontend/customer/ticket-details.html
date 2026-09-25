@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="description" content="View customer ticket details and conversation." />
+        <title>Ticket Details | Supportly</title>
+        <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+        <link rel="stylesheet" href="/css/global.css" />
+        <link rel="stylesheet" href="/css/tickets.css" />
+    </head>
+    <body data-page="customer-ticket-details" data-role="CUSTOMER" data-nav="tickets" data-title="Ticket Details" data-eyebrow="Customer workspace">
+        <main id="page-content" class="main-content">
+            <div class="page-heading"><div><a class="table-link" href="/customer/tickets.html">← Back to My Tickets</a></div></div>
+            <div class="ticket-layout">
+                <div class="ticket-main">
+                <section class="content-card"><div id="ticket-overview" class="ticket-overview"></div></section>
+                <section class="content-card">
+                    <div class="card-header"><div><h2>Ticket Conversation</h2><p>Messages between you and the support team</p></div></div>
+                    <div id="ticket-conversation" class="conversation" aria-live="polite"></div>
+                    <form id="message-form" class="message-composer" novalidate>
+                        <label class="field"><span class="sr-only">Message</span><textarea name="message" placeholder="Write a message to the support team…" required></textarea></label>
+                        <div class="message-composer-actions"><small class="field-error" data-error-for="message"></small><button class="button button--primary" type="submit">Send Message</button></div>
+                    </form>
+                </section>
+                </div>
+                <aside class="ticket-aside">
+                <section class="content-card"><div class="card-header"><div><h2>AI Classification</h2><p>Available when provided by the backend</p></div></div><div id="ai-classification" class="card-body"></div></section>
+                </aside>
+            </div>
+        </main>
+        <script type="module" src="/js/app.js"></script>
+    </body>
+</html>

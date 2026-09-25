@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="description" content="Support agent ticket details, conversation, controls, and AI response suggestion." />
+        <title>Ticket Details | Supportly</title>
+        <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+        <link rel="stylesheet" href="/css/global.css" />
+        <link rel="stylesheet" href="/css/tickets.css" />
+    </head>
+    <body data-page="agent-ticket-details" data-role="AGENT" data-nav="assigned-tickets" data-title="Ticket Details" data-eyebrow="Support workspace">
+        <main id="page-content" class="main-content">
+            <div class="page-heading"><div><a class="table-link" href="/agent/assigned-tickets.html">← Back to Assigned Tickets</a></div></div>
+            <div class="ticket-layout">
+                <div class="ticket-main">
+                    <section class="content-card"><div id="agent-ticket-overview" class="ticket-overview"></div></section>
+                    <section class="content-card">
+                        <div class="card-header"><div><h2>Ticket Conversation</h2><p>Full customer and support-agent message history</p></div></div>
+                        <div id="ticket-conversation" class="conversation" aria-live="polite"></div>
+                        <form id="agent-message-form" class="message-composer" novalidate>
+                            <label class="field"><span class="sr-only">Reply</span><textarea name="message" placeholder="Write a reply to the customer…" required></textarea></label>
+                            <div class="message-composer-actions"><small class="field-error" data-error-for="message"></small><button class="button button--primary" type="submit">Send Reply</button></div>
+                        </form>
+                    </section>
+                </div>
+                <aside class="ticket-aside">
+                    <section class="content-card">
+                        <div class="card-header"><div><h2>Ticket Controls</h2><p>Update assignment and workflow</p></div></div>
+                        <form id="ticket-controls" class="control-form">
+                            <label class="field"><span>Status</span><select name="status"></select></label>
+                            <label class="field"><span>Priority</span><select name="priority"></select></label>
+                            <label class="field"><span>Assigned Agent</span><select name="assignedAgentId"></select></label>
+                            <button class="button button--primary button--block" type="submit">Save Changes</button>
+                        </form>
+                    </section>
+                    <section id="ai-suggestion-card" class="content-card">
+                        <div class="card-header"><div><h2>AI Response Suggestion</h2><p>Review every suggestion before sending</p></div></div>
+                        <div class="card-body">
+                            <p class="ai-suggestion-intro">Generate a draft based on the current ticket context.</p>
+                            <p id="suggestion-error" class="form-alert form-alert--error hidden" role="alert"></p>
+                            <button id="generate-suggestion" class="button button--secondary button--block" type="button">Generate AI Suggestion</button>
+                            <div id="suggestion-panel" class="hidden">
+                                <label class="field"><span>Editable response</span><textarea id="ai-suggestion-text" rows="7"></textarea></label>
+                                <p class="ai-suggestion-note"><span>ⓘ</span><span>The suggestion is never sent automatically. You must confirm it below.</span></p>
+                                <div class="suggestion-actions"><button id="send-suggestion" class="button button--primary" type="button">Send Response</button></div>
+                            </div>
+                        </div>
+                    </section>
+                </aside>
+            </div>
+        </main>
+        <script type="module" src="/js/app.js"></script>
+    </body>
+</html>
