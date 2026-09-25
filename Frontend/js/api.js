@@ -8,25 +8,6 @@ const execute = async (mockCall, realCall) => CONFIG.USE_MOCK_API
     ? mockCall((await import("./mock-data.js")).MockAPI)
     : realCall();
 
-    // export function normalizeUser(user) {
-//     return {
-//         ...user,
-//         createdAt: user.created_date ?? user.createdAt,
-//         status: user.account_status === "ACTIVE" ? "Active"
-//         : user.account_status === "DISABLED" ? "Disabled" : user.status };
-// }
-
-// ENUM
-
-// {
-//   "id": 2,
-//   "name": "Ahmed",
-//   "email": "ahmed@example.com",
-//   "role": "customer",
-//   "created_at": "...",
-//   "status": "active"
-// }
-
 export function normalizeUser(user) {
     return {
         ...user,
@@ -34,25 +15,6 @@ export function normalizeUser(user) {
         status: user.status,
     };
 }
-
-// export function normalizeTicket(ticket) {
-//     const value = { ...ticket, customerId: ticket.customer_id ?? ticket.customerId,
-//         assignedAgentId: ticket.assigned_agent_id ?? ticket.assignedAgentId ?? null,
-//         assignedAgent: ticket.assigned_agent ?? ticket.assignedAgent ?? null,
-//         createdAt: ticket.created_date ?? ticket.createdAt, updatedAt: ticket.updated_date ?? ticket.updatedAt,
-//         aiClassification: ticket.ai_summary ? { summary: ticket.ai_summary,
-//         suggestedAction: ticket.ai_suggested_action, category: ticket.ai_category, priority: ticket.ai_priority }
-//         : ticket.aiClassification ?? null };
-//     ticketCache.set(value.id, value);
-//     return value;
-// }
-
-// {
-//   "customer_id": 1,
-//   "assigned_agent_id": 2,
-//   "created_at": "...",
-//   "updated_at": "..."
-// }
 
 export function normalizeTicket(ticket) {
     const value = {
@@ -75,14 +37,6 @@ export function normalizeTicket(ticket) {
     ticketCache.set(value.id, value);
     return value;
 }
-
-// const normalizeMessage = (item) => ({
-//     ...item,
-//     senderRole: item.sender_role ?? item.senderRole,
-//     senderName: item.sender_name ?? item.senderName,
-//     senderId: item.sender_id ?? item.senderId,
-//     timestamp: item.created_at ?? item.timestamp,
-// });
 
 const normalizeMessage = (item) => ({
     ...item,
@@ -134,8 +88,19 @@ export async function apiRequest(path, options = {}) {
 }
 
 export const login = (credentials) => execute(m => m.login(credentials), async () => {
-    const result = await apiRequest("/auth/login", { method: "POST", body: credentials });
-    return { ...result, user: normalizeUser(result.user) };
+    const result = await apiRequest("/auth/login", {
+        method: "POST",
+        body: credentials
+    });
+
+    localStorage.setItem(CONFIG.TOKEN_STORAGE_KEY, result.access_token);
+
+    const user = await getMe();
+
+    return {
+        ...result,
+        user: normalizeUser(user)
+    };
 });
 
 export const register = (payload) => execute(m => m.register(payload),
@@ -144,17 +109,7 @@ export const register = (payload) => execute(m => m.register(payload),
 export const getMe = () => execute(() => JSON.parse(localStorage.getItem(CONFIG.USER_STORAGE_KEY)),
     async () => normalizeUser(await apiRequest("/auth/me")));
 
-// export const logoutSession = () => execute(() => null,
-//     () => apiRequest("/auth/logout", { method: "POST" }));
-
 export const logoutSession = () => Promise.resolve(null);
-
-// export const getTickets = (filters = {}) => execute(m => m.getTickets(filters), async () => {
-//   const query = new URLSearchParams(Object.entries(filters)
-//     .map(([key, value]) => [key === "assignedAgentId" ? "assigned_agent_id" : key, value])
-//     .filter(([, value]) => value !== "" && value !== null && value !== undefined)).toString();
-//   return (await apiRequest(`/tickets${query ? `?${query}` : ""}`)).map(normalizeTicket);
-// });
 
 export const getTickets = (filters = {}) => execute(
     m => m.getTickets(filters),
@@ -215,9 +170,6 @@ export const getTicketMessages = id => execute(m => m.getTicketMessages(id),
 export const sendTicketMessage = (id, message) => execute(m => m.sendTicketMessage(id, message),
     async () => normalizeMessage(await apiRequest(`/tickets/${encodeURIComponent(id)}/messages`, { method: "POST", body: { message } })));
   
-// export const sendChatMessage = message => execute(m => m.sendChatMessage(message),
-//     () => apiRequest("/ai/chat", { method: "POST", body: { message } }));
-
 export const sendChatMessage = message => execute(
     m => m.sendChatMessage(message),
     async () => {
@@ -239,11 +191,6 @@ export const getChatMessages = () => execute(m => m.getChatMessages(), () => api
 export const generateAIResponseSuggestion = id => execute(m => m.generateAIResponseSuggestion(id),
     () => apiRequest("/ai/suggest-response", { method: "POST", body: { ticket_id: id } }));
 
-// export const getUsers = (role = ROLES.CUSTOMER) => execute(m => m.getUsers(role),
-//     async () => (await apiRequest(`/users?role=${encodeURIComponent(role)}`)).map(normalizeUser));
-
-// عشان ما نبوظش الـ frontend، عندنا حل بسيط: نخلي /users يرجع كل المستخدمين، وبعدها نعمل filtering في api.js.
-
 export const getUsers = (role = null) => execute(
     m => m.getUsers(role),
     async () => {
@@ -259,14 +206,6 @@ export const getUsers = (role = null) => execute(
 
 export const getUser = id => apiRequest(`/users/${encodeURIComponent(id)}`).then(normalizeUser);
 
-// export const getAgents = () => execute(m => m.getUsers(ROLES.AGENT), async () => {
-//     const current = JSON.parse(localStorage.getItem(CONFIG.USER_STORAGE_KEY) || "null");
-//     const path = current?.role === ROLES.AGENT ? "/tickets/assignees" : "/users?role=AGENT";
-//     return (await apiRequest(path)).map(normalizeUser);
-// });
-
-// لكن فيه نقطة permissions:
-
 export const getAgents = () => execute(
     m => m.getUsers(ROLES.AGENT),
     async () => {
@@ -274,10 +213,6 @@ export const getAgents = () => execute(
         return users;
     }
 );
-
-// export const updateUser = (id, changes) => execute(m => m.updateUser(id, changes),
-//     () => apiRequest(`/users/${encodeURIComponent(id)}`, { method: "PUT",
-//         body: { account_status: (changes.account_status || changes.status).toUpperCase() } }));
 
 export const updateUser = (id, changes) => execute(
     m => m.updateUser(id, changes),
@@ -289,27 +224,6 @@ export const updateUser = (id, changes) => execute(
 
 export const deleteUser = id => execute(m => m.deleteUser(id),
     () => apiRequest(`/users/${encodeURIComponent(id)}`, { method: "DELETE" }));
-
-// export const getDashboardStats = () => execute(async m => {
-//     const tickets = await m.getTickets();
-//     const users = JSON.parse(localStorage.getItem(CONFIG.USER_STORAGE_KEY) || "null");
-//     const agents = users?.role === ROLES.ADMIN ? await m.getUsers(ROLES.AGENT) : [];
-//     return { total: tickets.length, open: tickets.filter(t => t.status === "Open").length,
-//         inProgress: tickets.filter(t => t.status === "In Progress").length,
-//         resolved: tickets.filter(t => t.status === "Resolved").length,
-//         critical: tickets.filter(t => t.priority === "Critical").length, recentTickets: tickets.slice(0,5),
-//         average_tickets_per_category: tickets.length / TICKET_CATEGORIES.length,
-//         tickets_by_category: Object.fromEntries(TICKET_CATEGORIES.map(c => [c,tickets.filter(t => t.category === c).length])),
-//         tickets_by_status: Object.fromEntries(TICKET_STATUSES.map(s => [s,tickets.filter(t => t.status === s).length])),
-//         support_activity: agents.map(a => ({ agent_id:a.id,agent_name:a.name,assigned_tickets:tickets.filter(t => t.assignedAgentId === a.id).length })),
-//         tickets_by_agent:{ Unassigned:tickets.filter(t => !t.assignedAgentId).length }, ai_activity:{} };
-// }, async () => {
-//     const data = await apiRequest("/dashboard/stats");
-//     return { ...data, total: data.assigned_tickets ?? data.total_tickets,
-//         open: data.open_tickets, inProgress: data.in_progress_tickets, resolved: data.resolved_tickets,
-//         critical: data.critical_tickets ?? 0, recentTickets: (data.recent_tickets || []).map(normalizeTicket) };
-// });
-
 
 export const getDashboardStats = () => execute(
     async m => {

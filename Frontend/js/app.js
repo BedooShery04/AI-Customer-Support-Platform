@@ -14,7 +14,7 @@ import {
     initCustomerTickets,
 } from "./customer.js";
 
-import initChatbot from "./chatbot.js";
+import {initChatbot} from "./chatbot.js";
 
 import {
     initAgentDashboard,
