@@ -32,6 +32,14 @@ class TicketCustomerInfo(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class TicketAIClassificationInfo(BaseModel):
+    category: str
+    priority: str
+    summary: str
+    suggested_action: str
+
+    model_config = ConfigDict(from_attributes=True)
+
 
 class TicketResponse(BaseModel):
     id: int
@@ -48,5 +56,7 @@ class TicketResponse(BaseModel):
 
     created_at: datetime
     updated_at: datetime
+
+    ai_classification: TicketAIClassificationInfo | None = None
 
     model_config = ConfigDict(from_attributes=True)

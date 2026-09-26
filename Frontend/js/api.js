@@ -25,12 +25,12 @@ export function normalizeTicket(ticket) {
         createdAt: ticket.created_at ?? ticket.createdAt,
         updatedAt: ticket.updated_at ?? ticket.updatedAt,
 
-        aiClassification: ticket.ai_summary
+        aiClassification: ticket.ai_classification
         ? {
-            summary: ticket.ai_summary,
-            suggestedAction: ticket.ai_suggested_action,
-            category: ticket.ai_category,
-            priority: ticket.ai_priority,
+            summary: ticket.ai_classification.summary,
+            suggestedAction: ticket.ai_classification.suggested_action,
+            category: ticket.ai_classification.category,
+            priority: ticket.ai_classification.priority,
             }
         : ticket.aiClassification ?? null,
     };

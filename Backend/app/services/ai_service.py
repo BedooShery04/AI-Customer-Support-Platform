@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate
+
 from app.models.audit_log import AuditLog
 from app.enums import UserRole
 
@@ -108,6 +109,10 @@ class AIService:
             "message": final_message.content
         }
 
+    # =========================================================
+    # Get AI Chat History
+    # =========================================================
+
     @staticmethod
     def get_chat_history(
         db: Session,
@@ -146,7 +151,6 @@ class AIService:
         conversation = []
 
         for message in messages:
-
             conversation.append(
                 {
                     "sender_id": message.sender_id,
@@ -208,7 +212,7 @@ class AIService:
         )
 
         # -----------------------------------------------------
-        # Prepare data for AI
+        # Prepare ticket data
         # -----------------------------------------------------
 
         ticket_data = {
@@ -266,6 +270,7 @@ class AIService:
         suggestion = AISuggestionContent.model_validate(
             result
         )
+
         # -----------------------------------------------------
         # Record AI suggestion activity
         # -----------------------------------------------------
@@ -310,6 +315,16 @@ class AIService:
         )
 
         # -----------------------------------------------------
+        # Get ticket conversation
+        # -----------------------------------------------------
+
+        conversation = AIService.get_ticket_conversation(
+            ticket_id=ticket_id,
+            db=db,
+        )
+
+
+        # -----------------------------------------------------
         # Prepare ticket data
         # -----------------------------------------------------
 
@@ -320,6 +335,7 @@ class AIService:
             "category": ticket.category.value,
             "priority": ticket.priority.value,
             "status": ticket.status.value,
+            "conversation": conversation,
         }
 
         # -----------------------------------------------------

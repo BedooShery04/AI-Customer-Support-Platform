@@ -2,6 +2,7 @@ import {
   changedTicketFields,
   getDashboardStats,
   generateAIResponseSuggestion,
+  classifyTicket,
   getTicketById,
   getTicketMessages,
   getTickets,
@@ -235,6 +236,67 @@ function bindAISuggestion(ticketId, conversation) {
   });
 }
 
+
+function bindAIClassification(ticketId, existingClassification = null) {
+  const classify = document.querySelector("#classify-ticket");
+  const reclassify = document.querySelector("#reclassify-ticket");
+
+  const emptyPanel = document.querySelector("#classification-empty");
+  const panel = document.querySelector("#classification-panel");
+
+  const error = document.querySelector("#classification-error");
+
+  const category = document.querySelector("#ai-classification-category");
+  const priority = document.querySelector("#ai-classification-priority");
+  const summary = document.querySelector("#ai-classification-summary");
+  const action = document.querySelector("#ai-classification-action");
+
+  if (!classify) return;
+
+  const renderClassification = (result) => {
+    category.textContent = result?.category || "—";
+    priority.textContent = result?.priority || "—";
+    summary.textContent = result?.summary || "—";
+    action.textContent = result?.suggestedAction || result?.suggested_action || "—";
+
+    emptyPanel.classList.add("hidden");
+    panel.classList.remove("hidden");
+  };
+
+  const runClassification = async (button) => {
+    error.classList.add("hidden");
+
+    setButtonBusy(button, true, "Analyzing…");
+
+    try {
+      const result = await classifyTicket(ticketId);
+
+      renderClassification({
+        category: result.category,
+        priority: result.priority,
+        summary: result.summary,
+        suggestedAction: result.suggested_action,
+      });
+
+      showToast("Ticket classified successfully.");
+    } catch (requestError) {
+      error.textContent =
+        requestError.message || "Unable to classify the ticket.";
+      error.classList.remove("hidden");
+    } finally {
+      setButtonBusy(button, false, "Analyzing…");
+    }
+  };
+
+  classify.addEventListener("click", () => runClassification(classify));
+
+  reclassify?.addEventListener("click", () => runClassification(reclassify));
+
+  if (existingClassification) {
+    renderClassification(existingClassification);
+  }
+}
+
 export async function initAgentTicketDetails() {
   const ticketId = getQueryTicketId();
   const overview = document.querySelector("#agent-ticket-overview");
@@ -287,6 +349,7 @@ export async function initAgentTicketDetails() {
 
     bindMessageForm(messageForm, ticketId, conversation);
     bindAISuggestion(ticketId, conversation);
+   bindAIClassification(ticketId, ticket.aiClassification);
   } catch (error) {
     renderState(overview, "error", "Unable to load ticket", error.message);
     renderState(conversation, "error", "Unable to load conversation", "Please try again.");

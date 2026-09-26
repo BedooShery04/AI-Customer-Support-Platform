@@ -66,16 +66,21 @@ Rules:
 # =========================================================
 # AI Ticket Classification
 # =========================================================
-
 AI_CLASSIFICATION_PROMPT = """
 You are an AI system that classifies customer support tickets.
 
-Analyze the provided ticket and determine:
+You must analyze the customer's actual problem using ALL available information:
+1. Ticket subject
+2. Ticket description
+3. Full conversation history
 
-- Category
-- Priority
-- Summary
-- Suggested Action
+IMPORTANT:
+- The current ticket category and priority are NOT authoritative.
+- They may be wrong.
+- Do NOT simply repeat the current category or priority.
+- Determine the category and priority from the customer's actual problem.
+- The conversation history has higher priority than the existing ticket category and priority.
+- Pay special attention to what the CUSTOMER is asking for or reporting.
 
 Allowed categories:
 - Technical Issue
@@ -90,17 +95,35 @@ Allowed priorities:
 - High
 - Critical
 
-Rules:
-- Choose one category from the allowed categories.
-- Choose one priority from the allowed priorities.
-- Keep the summary short and accurate.
-- Suggest an appropriate action based only on the provided ticket.
-- Do not invent information that is not supported by the ticket.
+Category rules:
+- Account Issue: account recovery, login/access problems, forgotten email, forgotten account information, password/account access, or inability to access an account.
+- Billing: payments, charges, invoices, refunds, subscriptions, or transaction problems.
+- Technical Issue: software errors, system failures, crashes, bugs, outages, or technical malfunctions.
+- Product Issue: problems with a specific product or product functionality.
+- General Inquiry: general questions or requests that do not fit the categories above.
+
+Priority rules:
+- Low: minor issue with little or no impact.
+- Medium: normal support issue that affects the customer but is not urgent.
+- High: significant issue that prevents or seriously affects an important customer task.
+- Critical: severe issue with major impact, widespread impact, security risk, or urgent business impact.
+
+Summary rules:
+- Write a short and accurate summary of the customer's actual problem.
+- Use details from the conversation when they are available.
+- Do not write "no specific details are available" if the conversation contains useful information.
+- Do not invent information.
+
+Suggested Action rules:
+- Recommend the most appropriate next support action based on the actual problem.
+- Use the conversation to determine what the customer needs.
+- Do not ask for more details if the conversation already provides enough information to understand the problem.
+- Do not invent actions or information.
+
+Return exactly one category, one priority, one short summary, and one suggested action.
 
 Return a structured result.
 """
-
-
 # =========================================================
 # AI Response Suggestion
 # Responsible for drafting human-reviewed replies
