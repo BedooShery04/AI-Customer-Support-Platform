@@ -229,34 +229,46 @@ export const deleteUser = id => execute(m => m.deleteUser(id),
 export const getDashboardStats = () => execute(
     async m => {
         const tickets = await m.getTickets();
+
         return {
-        total: tickets.length,
-        open: tickets.filter(t => t.status === "Open").length,
-        inProgress: tickets.filter(t => t.status === "In Progress").length,
-        resolved: tickets.filter(t => t.status === "Resolved").length,
-        recentTickets: tickets.slice(0, 5),
+            total: tickets.length,
+            open: tickets.filter(t => t.status === "Open").length,
+            inProgress: tickets.filter(t => t.status === "In Progress").length,
+            resolved: tickets.filter(t => t.status === "Resolved").length,
+            recentTickets: tickets.slice(0, 5),
         };
     },
+
     async () => {
         const currentUser = JSON.parse(
-        localStorage.getItem(CONFIG.USER_STORAGE_KEY) || "null"
+            localStorage.getItem(CONFIG.USER_STORAGE_KEY) || "null"
         );
 
+        // Admin dashboard has its own backend endpoint
+        if (currentUser?.role === ROLES.ADMIN) {
+            const dashboard = await apiRequest("/admin/dashboard");
+
+            return {
+                ...dashboard,
+                recentTickets: (dashboard.recent_tickets || []).map(normalizeTicket),
+            };
+        }
         let path = "/tickets";
 
         if (currentUser?.role === ROLES.CUSTOMER) {
-        path = "/tickets/my";
+            path = "/tickets/my";
         } else if (currentUser?.role === ROLES.AGENT) {
-        path = "/tickets/assigned";
+            path = "/tickets/assigned";
         }
 
         const tickets = (await apiRequest(path)).map(normalizeTicket);
+
         const countBy = (key) =>
-        tickets.reduce((counts, ticket) => {
-            const value = ticket[key] || "Unassigned";
-            counts[value] = (counts[value] || 0) + 1;
-            return counts;
-        }, {});
+            tickets.reduce((counts, ticket) => {
+                const value = ticket[key] || "Unassigned";
+                counts[value] = (counts[value] || 0) + 1;
+                return counts;
+            }, {});
 
         const ticketsByCategory = countBy("category");
         const ticketsByStatus = countBy("status");

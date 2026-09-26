@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate
-
+from app.models.audit_log import AuditLog
 from app.enums import UserRole
 
 from app.agent.graph import build_graph, model
@@ -266,6 +266,18 @@ class AIService:
         suggestion = AISuggestionContent.model_validate(
             result
         )
+        # -----------------------------------------------------
+        # Record AI suggestion activity
+        # -----------------------------------------------------
+
+        audit_log = AuditLog(
+            admin_id=user_id,
+            ticket_id=ticket_id,
+            action="AI response suggestion generated",
+        )
+
+        db.add(audit_log)
+        db.commit()
 
         # Return only the suggestion text
         return suggestion.suggestion

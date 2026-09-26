@@ -6,6 +6,7 @@ from app.routers import tickets
 from app.routers import ai
 from app.routers import messages
 from app.routers import users
+from app.routers import admin
 
 app = FastAPI(title="AI Customer Support Platform")
 app.add_middleware(
@@ -23,5 +24,6 @@ app.include_router(users.router)
 app.include_router(tickets.router)
 app.include_router(ai.router)
 app.include_router(messages.router)
+app.include_router(admin.router)
 
 
