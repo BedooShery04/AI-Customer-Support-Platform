@@ -1,13 +1,14 @@
 export const CONFIG = Object.freeze({
-	// One origin by default. A separate Live Server on port 5500 uses port 8000.
-	API_BASE_URL: window.location.port === "5500"
-		? `${window.location.protocol}//${window.location.hostname}:8000`
-		: window.location.origin,
-	USE_MOCK_API: false,
-	TOKEN_STORAGE_KEY: "support_platform_token",
-	USER_STORAGE_KEY: "support_platform_user",
-	MOCK_DB_STORAGE_KEY: "support_platform_mock_db_v1",
-	MOCK_DELAY_MS: 320,
+	API_BASE_URL:
+		window.location.port === "5500"
+			? `${window.location.protocol}//${window.location.hostname}:8000`
+			: window.location.origin,
+	
+	TOKEN_STORAGE_KEY:
+		"support_platform_token",
+	
+	USER_STORAGE_KEY:
+		"support_platform_user"
 });
 
 export const ROLES = Object.freeze({
