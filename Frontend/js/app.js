@@ -14,7 +14,7 @@ import {
     initCustomerTickets,
 } from "./customer.js";
 
-import {initChatbot} from "./chatbot.js";
+import {initChatbot, initAgentAIChat} from "./chatbot.js";
 
 import {
     initAgentDashboard,
@@ -36,9 +36,15 @@ const controllers = {
     "customer-create-ticket": initCreateTicket,
     "customer-ticket-details": initCustomerTicketDetails,
     "customer-chatbot": initChatbot,
-    "agent-dashboard": initAgentDashboard,
+
+    "agent-dashboard": async (user) => {
+        await initAgentDashboard(user);
+        await initAgentAIChat(user);
+    },
+    "agent-ai-assistant": initAgentAIChat,
     "agent-assigned-tickets": initAssignedTickets,
     "agent-ticket-details": initAgentTicketDetails,
+
     "admin-dashboard": initAdminDashboard,
     "admin-users": initAdminUsers,
     "admin-agents": initAdminAgents,
