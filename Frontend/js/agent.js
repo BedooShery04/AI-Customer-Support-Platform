@@ -8,6 +8,7 @@ import {
   getTickets,
   sendTicketMessage,
   updateTicket,
+  escalateTicket
 } from "./api.js";
 import {
   TICKET_CATEGORIES,
@@ -346,6 +347,28 @@ export async function initAgentTicketDetails() {
         setButtonBusy(button, false, "Saving…");
       }
     });
+        const escalateButton = document.querySelector("#escalate-ticket");
+
+    escalateButton?.addEventListener("click", async () => {
+      setButtonBusy(escalateButton, true, "Escalating…");
+
+      try {
+        const updatedTicket = await escalateTicket(ticketId);
+
+        controls.elements.priority.value = updatedTicket.priority;
+
+        showToast("Ticket escalated successfully.");
+        window.location.reload();
+      } catch (error) {
+        showToast(
+          error.message || "Unable to escalate the ticket.",
+          "error"
+        );
+      } finally {
+        setButtonBusy(escalateButton, false, "Escalating…");
+      }
+    });
+
 
     bindMessageForm(messageForm, ticketId, conversation);
     bindAISuggestion(ticketId, conversation);
@@ -357,4 +380,210 @@ export async function initAgentTicketDetails() {
     messageForm?.remove();
     document.querySelector("#ai-suggestion-card")?.remove();
   }
+}
+
+export async function initAgentCustomers() {
+  const container = document.querySelector("#agent-customers");
+
+  if (!container) return;
+
+  renderState(container, "loading", "Loading customers…");
+
+  try {
+    const tickets = await getTickets();
+
+    if (!tickets.length) {
+      renderState(
+        container,
+        "empty",
+        "No customers yet",
+        "Customers with assigned tickets will appear here.",
+      );
+      return;
+    }
+
+    const customers = new Map();
+
+    tickets.forEach((ticket) => {
+      const customer = ticket.customer;
+
+      if (!customer?.id) return;
+
+      if (!customers.has(customer.id)) {
+        customers.set(customer.id, {
+          ...customer,
+          tickets: [],
+        });
+      }
+
+      customers.get(customer.id).tickets.push(ticket);
+    });
+
+    if (!customers.size) {
+      renderState(
+        container,
+        "empty",
+        "No customer information available",
+        "Customer information could not be loaded.",
+      );
+      return;
+    }
+
+    container.innerHTML = Array.from(customers.values())
+      .map((customer) => {
+        const tickets = customer.tickets;
+
+        const open = tickets.filter(
+          (ticket) => ticket.status === "Open",
+        ).length;
+
+        const inProgress = tickets.filter(
+          (ticket) => ticket.status === "In Progress",
+        ).length;
+
+        const waiting = tickets.filter(
+          (ticket) => ticket.status === "Waiting for Customer",
+        ).length;
+
+        const resolved = tickets.filter(
+          (ticket) => ticket.status === "Resolved",
+        ).length;
+
+        return `
+          <article class="customer-card">
+            <div class="customer-card__header">
+              <div>
+                <h2>${escapeHTML(customer.name || "—")}</h2>
+                <p>${escapeHTML(customer.email || "—")}</p>
+              </div>
+
+              <span class="customer-ticket-count">
+                ${tickets.length} ${tickets.length === 1 ? "Ticket" : "Tickets"}
+              </span>
+            </div>
+
+            <div class="customer-ticket-stats">
+              <span>Open: ${open}</span>
+              <span>In Progress: ${inProgress}</span>
+              <span>Waiting: ${waiting}</span>
+              <span>Resolved: ${resolved}</span>
+            </div>
+
+            <div class="customer-card__footer">
+              <a
+                class="button button--secondary"
+                href="/agent/customer-details.html?id=${encodeURIComponent(customer.id)}"
+              >
+                View Customer
+              </a>
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+  } catch (error) {
+    renderState(
+      container,
+      "error",
+      "Unable to load customers",
+      error.message,
+    );
+  }
+}
+
+export async function initAgentCustomerDetails(user) {
+    const nameElement = document.querySelector("#customer-name");
+    const emailElement = document.querySelector("#customer-email");
+    const statsContainer = document.querySelector("#customer-stats");
+    const ticketsContainer = document.querySelector("#customer-tickets");
+
+    const customerId = new URLSearchParams(
+        window.location.search
+    ).get("id");
+
+    if (!customerId) {
+        renderState(
+            ticketsContainer,
+            "error",
+            "Customer not selected",
+            "Return to Customers and select a customer."
+        );
+        return;
+    }
+
+    renderState(
+        ticketsContainer,
+        "loading",
+        "Loading customer tickets..."
+    );
+
+    try {
+        const allTickets = await getTickets();
+
+        const tickets = allTickets.filter(
+            ticket => String(ticket.customerId) === String(customerId)
+        );
+
+        if (!tickets.length) {
+            nameElement.textContent = "Customer not found";
+            emailElement.textContent = "";
+
+            renderState(
+                ticketsContainer,
+                "empty",
+                "No tickets found",
+                "No assigned tickets were found for this customer."
+            );
+
+            return;
+        }
+
+        const customer = tickets[0].customer;
+        console.log("Customer:", customer);
+        console.log("Ticket:", tickets[0]);
+
+        document.querySelector("#customer-info-name").textContent =
+         customer?.name || "—";
+
+        document.querySelector("#customer-info-email").textContent =
+            customer?.email || "—";
+
+        document.querySelector("#customer-info-id").textContent =
+            customer?.id ?? customerId;
+
+        nameElement.textContent = customer?.name || "Customer";
+        emailElement.textContent = customer?.email || "—";
+
+        const countStatus = status =>
+            tickets.filter(ticket => ticket.status === status).length;
+
+        const stats = [
+            ["Total Tickets", tickets.length],
+            ["Open", countStatus("Open")],
+            ["In Progress", countStatus("In Progress")],
+            ["Waiting", countStatus("Waiting for Customer")],
+            ["Resolved", countStatus("Resolved")]
+        ];
+
+        statsContainer.innerHTML = stats.map(([label, value]) => `
+            <div class="customer-stat-card">
+                <span>${escapeHTML(label)}</span>
+                <strong>${value}</strong>
+            </div>
+        `).join("");
+
+        renderTicketTable(ticketsContainer, tickets, {
+            role: user.role,
+            showCustomer: false,
+            showAgent: false
+        });
+
+    } catch (error) {
+        renderState(
+            ticketsContainer,
+            "error",
+            "Unable to load customer",
+            error.message
+        );
+    }
 }

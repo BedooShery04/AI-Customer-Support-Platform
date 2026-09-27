@@ -34,7 +34,7 @@ const navigation = {
     [ROLES.AGENT]: [
         ["dashboard", "Dashboard", "/agent/dashboard.html", "dashboard"],
         ["assigned-tickets", "Assigned Tickets", "/agent/assigned-tickets.html", "ticket"],
-        ["ai-assistant", "AI Assistant", "/agent/ai-assistant.html", "chat"],
+        ["customers", "Customers", "/agent/customers.html", "users"],
     ],
     [ROLES.ADMIN]: [
         ["dashboard", "Dashboard", "/admin/dashboard.html", "dashboard"],

@@ -11,6 +11,7 @@ from app.dependencies.roles import (
 )
 
 from app.models.user import User
+from app.models.audit_log import AuditLog
 
 from app.schemas.ticket import (
     TicketCreate,
@@ -31,7 +32,7 @@ from app.services.ticket_service import (
 
 router = APIRouter(
     prefix="/tickets",
-    tags=["Tickets"]
+    tags=["Tickets"],
 )
 
 
@@ -43,18 +44,18 @@ router = APIRouter(
 @router.post(
     "",
     response_model=TicketResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=status.HTTP_201_CREATED,
 )
 def create_new_ticket(
     ticket_data: TicketCreate,
     current_user: User = Depends(require_customer),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     return create_ticket(
         ticket_data=ticket_data,
         user_id=current_user.id,
         user_role=current_user.role,
-        db=db
+        db=db,
     )
 
 
@@ -65,15 +66,15 @@ def create_new_ticket(
 
 @router.get(
     "",
-    response_model=list[TicketResponse]
+    response_model=list[TicketResponse],
 )
 def get_all(
     current_user: User = Depends(require_admin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     return get_all_tickets(
         user_role=current_user.role,
-        db=db
+        db=db,
     )
 
 
@@ -84,17 +85,17 @@ def get_all(
 
 @router.get(
     "/my",
-    response_model=list[TicketResponse]
+    response_model=list[TicketResponse],
 )
 def get_my_tickets(
     current_user: User = Depends(require_customer),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     return get_customer_tickets(
         customer_id=current_user.id,
         user_id=current_user.id,
         user_role=current_user.role,
-        db=db
+        db=db,
     )
 
 
@@ -105,17 +106,17 @@ def get_my_tickets(
 
 @router.get(
     "/assigned",
-    response_model=list[TicketResponse]
+    response_model=list[TicketResponse],
 )
 def get_my_assigned_tickets(
     current_user: User = Depends(require_agent),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     return get_agent_tickets(
         agent_id=current_user.id,
         user_id=current_user.id,
         user_role=current_user.role,
-        db=db
+        db=db,
     )
 
 
@@ -126,18 +127,18 @@ def get_my_assigned_tickets(
 
 @router.get(
     "/{ticket_id}",
-    response_model=TicketResponse
+    response_model=TicketResponse,
 )
 def get_single_ticket(
     ticket_id: int,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     return get_ticket(
         ticket_id=ticket_id,
         user_id=current_user.id,
         user_role=current_user.role,
-        db=db
+        db=db,
     )
 
 
@@ -148,21 +149,57 @@ def get_single_ticket(
 
 @router.put(
     "/{ticket_id}",
-    response_model=TicketResponse
+    response_model=TicketResponse,
 )
 def update_existing_ticket(
     ticket_id: int,
     ticket_data: TicketUpdate,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     return update_ticket(
         ticket_id=ticket_id,
         ticket_data=ticket_data,
         user_id=current_user.id,
         user_role=current_user.role,
-        db=db
+        db=db,
     )
+
+
+# =========================================================
+# Escalate a ticket
+# Agent only
+# =========================================================
+
+@router.post(
+    "/{ticket_id}/escalate",
+    response_model=TicketResponse,
+)
+def escalate_existing_ticket(
+    ticket_id: int,
+    current_user: User = Depends(require_agent),
+    db: Session = Depends(get_db),
+):
+    ticket = update_ticket(
+        ticket_id=ticket_id,
+        ticket_data=TicketUpdate(
+            priority="Critical",
+        ),
+        user_id=current_user.id,
+        user_role=current_user.role,
+        db=db,
+    )
+
+    audit_log = AuditLog(
+        admin_id=current_user.id,
+        ticket_id=ticket_id,
+        action="Ticket escalated",
+    )
+
+    db.add(audit_log)
+    db.commit()
+
+    return ticket
 
 
 # =========================================================
@@ -172,17 +209,17 @@ def update_existing_ticket(
 
 @router.delete(
     "/{ticket_id}",
-    status_code=status.HTTP_204_NO_CONTENT
+    status_code=status.HTTP_204_NO_CONTENT,
 )
 def delete_existing_ticket(
     ticket_id: int,
     current_user: User = Depends(require_admin),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     delete_ticket(
         ticket_id=ticket_id,
         user_role=current_user.role,
-        db=db
+        db=db,
     )
 
     return None
