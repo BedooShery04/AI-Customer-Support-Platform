@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.enums import UserRole
 from app.schemas.ticket import TicketCreate, TicketUpdate
 from app.services import ticket_service
+from app.models.audit_log import AuditLog
 
 
 def _ticket_to_dict(ticket):
@@ -207,6 +208,14 @@ def build_tools(
             user_role=user_role,
             db=db
         )
+        audit_log = AuditLog(
+            admin_id=user_id,
+            ticket_id=ticket_id,
+            action="Ticket escalated",
+        )
+
+        db.add(audit_log)
+        db.commit()
 
         return {
             "success": True,
