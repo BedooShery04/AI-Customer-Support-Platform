@@ -6,7 +6,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 
-from app.enums import UserRole
+from app.enums.user import UserRole, UserStatus
 from app.models.user import User
 
 
@@ -66,10 +66,6 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 def authenticate_user(db: Session, email: str, password: str) -> User | None:
     """
     Authenticate a user using email and password.
-
-    Returns:
-        User object if authentication succeeds.
-        None if authentication fails.
     """
 
     user = (
@@ -82,16 +78,24 @@ def authenticate_user(db: Session, email: str, password: str) -> User | None:
     if user is None:
         return None
 
-    # User account is disabled/inactive
-    if user.status != "active":
-        return None
-
     # Password is incorrect
     if not verify_password(
         password,
         user.password_hash
     ):
         return None
+
+    # Account is waiting for admin approval
+    if user.status == UserStatus.SUSPENDED:
+        raise ValueError(
+            "Your account is waiting for admin approval."
+        )
+
+    # Account is inactive
+    if user.status == UserStatus.INACTIVE:
+        raise ValueError(
+            "Your account has been deactivated."
+        )
 
     return user
 

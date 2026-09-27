@@ -493,7 +493,7 @@ export const deleteUser = (id) =>
    Dashboard
 ========================= */
 
-export const getDashboardStats =async () => {
+export const getDashboardStats = async () => {
     const currentUser =
         JSON.parse(
             localStorage.getItem(
@@ -617,7 +617,7 @@ export const getDashboardStats =async () => {
         average_tickets_per_category:
             categoryCount
                 ? tickets.length /
-                    categoryCount
+                categoryCount
                 : 0,
     };
 };

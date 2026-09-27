@@ -1,46 +1,30 @@
 <!doctype html>
 <html lang="en">
+
     <head>
         <meta charset="UTF-8" />
-        <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-        />
-        <meta
-            name="description"
-            content="Support agent ticket details, conversation, controls, and AI response suggestion."
-        />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta name="description"
+            content="Support agent ticket details, conversation, controls, and AI response suggestion." />
         <title>Ticket Details | Supportly</title>
 
-        <link
-            rel="icon"
-            href="../assets/favicon.svg"
-            type="image/svg+xml"
-        />
+        <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
 
         <link rel="stylesheet" href="../css/global.css" />
         <link rel="stylesheet" href="../css/tickets.css" />
     </head>
 
-    <body
-        data-page="agent-ticket-details"
-        data-role="agent"
-        data-nav="assigned-tickets"
-        data-title="Ticket Details"
-        data-eyebrow="Support workspace"
-    >
+    <body data-page="agent-ticket-details" data-role="agent" data-nav="assigned-tickets" data-title="Ticket Details"
+        data-eyebrow="Support workspace">
         <main id="page-content" class="main-content">
 
             <!-- =====================================================
-                 Page Heading
-            ====================================================== -->
+                    Page Heading
+                ====================================================== -->
 
             <div class="page-heading">
                 <div>
-                    <a
-                        class="table-link"
-                        href="assigned-tickets.html"
-                    >
+                    <a class="table-link" href="assigned-tickets.html">
                         ← Back to Assigned Tickets
                     </a>
                 </div>
@@ -48,23 +32,20 @@
 
 
             <!-- =====================================================
-                 Ticket Layout
-            ====================================================== -->
+                    Ticket Layout
+                ====================================================== -->
 
             <div class="ticket-layout">
 
                 <!-- =================================================
-                     Main Content
-                ================================================== -->
+                        Main Content
+                    ================================================== -->
 
                 <div class="ticket-main">
 
                     <!-- Ticket Overview -->
                     <section class="content-card">
-                        <div
-                            id="agent-ticket-overview"
-                            class="ticket-overview"
-                        ></div>
+                        <div id="agent-ticket-overview" class="ticket-overview"></div>
                     </section>
 
 
@@ -81,43 +62,25 @@
                             </div>
                         </div>
 
-                        <div
-                            id="ticket-conversation"
-                            class="conversation"
-                            aria-live="polite"
-                        ></div>
+                        <div id="ticket-conversation" class="conversation" aria-live="polite"></div>
 
 
                         <!-- Reply Form -->
-                        <form
-                            id="agent-message-form"
-                            class="message-composer"
-                            novalidate
-                        >
+                        <form id="agent-message-form" class="message-composer" novalidate>
 
                             <label class="field">
                                 <span class="sr-only">
                                     Reply
                                 </span>
 
-                                <textarea
-                                    name="message"
-                                    placeholder="Write a reply to the customer…"
-                                    required
-                                ></textarea>
+                                <textarea name="message" placeholder="Write a reply to the customer…" required></textarea>
                             </label>
 
                             <div class="message-composer-actions">
 
-                                <small
-                                    class="field-error"
-                                    data-error-for="message"
-                                ></small>
+                                <small class="field-error" data-error-for="message"></small>
 
-                                <button
-                                    class="button button--primary"
-                                    type="submit"
-                                >
+                                <button class="button button--primary" type="submit">
                                     Send Reply
                                 </button>
 
@@ -131,15 +94,15 @@
 
 
                 <!-- =================================================
-                     Sidebar
-                ================================================== -->
+                        Sidebar
+                    ================================================== -->
 
                 <aside class="ticket-aside">
 
 
                     <!-- =================================================
-                         Ticket Controls
-                    ================================================== -->
+                            Ticket Controls
+                        ================================================== -->
 
                     <section class="content-card">
 
@@ -152,10 +115,7 @@
                             </div>
                         </div>
 
-                        <form
-                            id="ticket-controls"
-                            class="control-form"
-                        >
+                        <form id="ticket-controls" class="control-form">
 
                             <label class="field">
                                 <span>Status</span>
@@ -167,10 +127,7 @@
                                 <select name="priority"></select>
                             </label>
 
-                            <button
-                                class="button button--primary button--block"
-                                type="submit"
-                            >
+                            <button class="button button--primary button--block" type="submit">
                                 Save Changes
                             </button>
 
@@ -180,13 +137,10 @@
 
 
                     <!-- =================================================
-                         AI Response Suggestion
-                    ================================================== -->
+                            AI Response Suggestion
+                        ================================================== -->
 
-                    <section
-                        id="ai-suggestion-card"
-                        class="content-card"
-                    >
+                    <section id="ai-suggestion-card" class="content-card">
 
                         <div class="card-header">
                             <div>
@@ -204,32 +158,18 @@
                                 ticket context.
                             </p>
 
-                            <p
-                                id="suggestion-error"
-                                class="form-alert form-alert--error hidden"
-                                role="alert"
-                            ></p>
+                            <p id="suggestion-error" class="form-alert form-alert--error hidden" role="alert"></p>
 
-                            <button
-                                id="generate-suggestion"
-                                class="button button--secondary button--block"
-                                type="button"
-                            >
+                            <button id="generate-suggestion" class="button button--secondary button--block" type="button">
                                 Generate AI Suggestion
                             </button>
 
-                            <div
-                                id="suggestion-panel"
-                                class="hidden"
-                            >
+                            <div id="suggestion-panel" class="hidden">
 
                                 <label class="field">
                                     <span>Editable response</span>
 
-                                    <textarea
-                                        id="ai-suggestion-text"
-                                        rows="7"
-                                    ></textarea>
+                                    <textarea id="ai-suggestion-text" rows="7"></textarea>
                                 </label>
 
                                 <p class="ai-suggestion-note">
@@ -244,11 +184,7 @@
 
                                 <div class="suggestion-actions">
 
-                                    <button
-                                        id="send-suggestion"
-                                        class="button button--primary"
-                                        type="button"
-                                    >
+                                    <button id="send-suggestion" class="button button--primary" type="button">
                                         Send Response
                                     </button>
 
@@ -262,13 +198,10 @@
 
 
                     <!-- =================================================
-                         AI Classification
-                    ================================================== -->
+                            AI Classification
+                        ================================================== -->
 
-                    <section
-                        id="ai-classification-card"
-                        class="content-card"
-                    >
+                    <section id="ai-classification-card" class="content-card">
 
                         <div class="card-header">
                             <div>
@@ -282,11 +215,7 @@
                         <div class="card-body">
 
                             <!-- Classification Error -->
-                            <p
-                                id="classification-error"
-                                class="form-alert form-alert--error hidden"
-                                role="alert"
-                            ></p>
+                            <p id="classification-error" class="form-alert form-alert--error hidden" role="alert"></p>
 
 
                             <!-- Empty State -->
@@ -298,11 +227,7 @@
                                     suggested action.
                                 </p>
 
-                                <button
-                                    id="classify-ticket"
-                                    class="button button--secondary button--block"
-                                    type="button"
-                                >
+                                <button id="classify-ticket" class="button button--secondary button--block" type="button">
                                     Classify Ticket with AI
                                 </button>
 
@@ -310,10 +235,7 @@
 
 
                             <!-- Classification Result -->
-                            <div
-                                id="classification-panel"
-                                class="hidden"
-                            >
+                            <div id="classification-panel" class="hidden">
 
                                 <!-- Category & Priority -->
                                 <div class="ai-classification-grid">
@@ -321,9 +243,7 @@
                                     <div class="classification-item">
                                         <span>Category</span>
 
-                                        <strong
-                                            id="ai-classification-category"
-                                        >
+                                        <strong id="ai-classification-category">
                                             —
                                         </strong>
                                     </div>
@@ -332,9 +252,7 @@
                                     <div class="classification-item">
                                         <span>Priority</span>
 
-                                        <strong
-                                            id="ai-classification-priority"
-                                        >
+                                        <strong id="ai-classification-priority">
                                             —
                                         </strong>
                                     </div>
@@ -347,9 +265,7 @@
 
                                     <span>Summary</span>
 
-                                    <p
-                                        id="ai-classification-summary"
-                                    >
+                                    <p id="ai-classification-summary">
                                         —
                                     </p>
 
@@ -361,9 +277,7 @@
 
                                     <span>Suggested Action</span>
 
-                                    <p
-                                        id="ai-classification-action"
-                                    >
+                                    <p id="ai-classification-action">
                                         —
                                     </p>
 
@@ -371,11 +285,7 @@
 
 
                                 <!-- Reclassify -->
-                                <button
-                                    id="reclassify-ticket"
-                                    class="button button--secondary button--block"
-                                    type="button"
-                                >
+                                <button id="reclassify-ticket" class="button button--secondary button--block" type="button">
                                     Reclassify with AI
                                 </button>
 
@@ -393,13 +303,11 @@
 
 
         <!-- =========================================================
-             Application Script
-        ========================================================== -->
+                Application Script
+            ========================================================== -->
 
-        <script
-            type="module"
-            src="../js/app.js"
-        ></script>
+        <script type="module" src="../js/app.js"></script>
 
     </body>
+
 </html>
