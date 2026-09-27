@@ -205,8 +205,6 @@ def create_ticket(
         customer_id=user_id,
         subject=ticket_data.subject,
         description=ticket_data.description,
-        category=ticket_data.category,
-        priority=ticket_data.priority
     )
 
     db.add(new_ticket)

@@ -409,6 +409,9 @@ class AIService:
                 classification.suggested_action
             )
 
+            ticket.category = classification.category
+            ticket.priority = classification.priority
+
             db.commit()
             db.refresh(existing)
 
@@ -427,6 +430,9 @@ class AIService:
             summary=classification.summary,
             suggested_action=classification.suggested_action,
         )
+
+        ticket.category = classification.category
+        ticket.priority = classification.priority
 
         db.add(new_classification)
 

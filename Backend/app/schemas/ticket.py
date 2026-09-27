@@ -12,8 +12,6 @@ from app.enums import (
 class TicketCreate(BaseModel):
     subject: str
     description: str
-    category: TicketCategory
-    priority: TicketPriority = TicketPriority.MEDIUM
 
 
 class TicketUpdate(BaseModel):

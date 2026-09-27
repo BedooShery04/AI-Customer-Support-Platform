@@ -63,7 +63,8 @@ class Ticket(Base):
             name="ticket_category",
             values_callable=lambda enum_class: [item.value for item in enum_class]
         ),
-        nullable=False
+        nullable=False,
+        default=TicketCategory.GENERAL_INQUIRY
     )
 
     priority: Mapped[TicketPriority] = mapped_column(
