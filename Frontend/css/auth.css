@@ -231,3 +231,58 @@
         padding: 26px max(22px, 7vw);
     }
 }
+
+.radio-group {
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.radio-option {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: #fff;
+    cursor: pointer;
+    color: var(--ink);
+    font-size: 0.9rem;
+    font-weight: 650;
+    transition:
+        border-color 0.2s ease,
+        background 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.radio-option:hover {
+    border-color: #b8c7ee;
+    background: var(--surface-subtle);
+}
+
+.radio-option input[type="radio"] {
+    margin: 0;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.radio-option:has(input[type="radio"]:checked) {
+    border-color: var(--primary);
+    background: #f5f7ff;
+    box-shadow: 0 0 0 1px var(--primary);
+}
+
+.radio-option:has(input[type="radio"]:focus-visible) {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+    .radio-group {
+        flex-direction: column;
+    }
+}

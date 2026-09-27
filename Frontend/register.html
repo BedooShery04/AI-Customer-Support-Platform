@@ -20,7 +20,7 @@
                 </a>
                 <section class="auth-card" aria-labelledby="register-title">
                     <h1 id="register-title">Create your account</h1>
-                    <p class="auth-intro">Register as a customer to create and track support requests.</p>
+                    <p class="auth-intro">Create an account to access the AI Customer Support Platform.</p>
                     <form class="auth-form" id="register-form" novalidate>
                         <div class="form-alert hidden" data-form-message role="alert"></div>
                         <label class="field">
@@ -47,11 +47,28 @@
                                 placeholder="Repeat your password" minlength="8" required aria-invalid="false" />
                             <small class="field-error" data-error-for="confirmPassword"></small>
                         </label>
+                        <div class="field">
+                            <span>Account Type</span>
+
+                            <div class="radio-group">
+                                <label class="radio-option">
+                                    <input type="radio" name="role" value="customer" checked />
+                                    <span>Customer</span>
+                                </label>
+
+                                <label class="radio-option">
+                                    <input type="radio" name="role" value="agent" />
+                                    <span>Agent</span>
+                                </label>
+                            </div>
+
+                            <small class="field-error" data-error-for="role"></small>
+                        </div>
                         <button class="button button--primary button--block" type="submit">Create account</button>
                     </form>
                     <p class="auth-footer">Already have an account? <a href="login.html">Sign in</a></p>
                 </section>
-                <span class="auth-legal">Customer registration only · Roles are managed by administrators</span>
+                <span class="auth-legal">Customer and Agent registration · Agent accounts require admin approval</span>
             </main>
             <aside class="auth-side" aria-hidden="true">
                 <div class="auth-side-content">

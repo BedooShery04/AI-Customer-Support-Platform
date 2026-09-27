@@ -162,6 +162,7 @@ export function initRegisterPage() {
             name: form.elements.name.value.trim(),
             email: form.elements.email.value.trim(),
             password: form.elements.password.value,
+            role: form.elements.role.value,
         };
         const confirmation = form.elements.confirmPassword.value;
         let valid = true;
@@ -179,6 +180,10 @@ export function initRegisterPage() {
         }
         if (confirmation !== payload.password) {
             setFieldError(form, "confirmPassword", "Passwords do not match.");
+            valid = false;
+        }
+        if (!["customer", "agent"].includes(payload.role)) {
+            setFieldError(form, "role", "Select a valid account type.");
             valid = false;
         }
         if (!valid) return;

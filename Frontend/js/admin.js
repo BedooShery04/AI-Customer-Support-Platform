@@ -262,13 +262,20 @@ export async function initAdminUsers() {
 
             users.sort((a, b) => {
                 const roleOrder = {
-                    customer: 1,
+                    admin: 1,
                     agent: 2,
-                    admin: 3,
+                    customer: 3,
                 };
 
-                return roleOrder[a.role] - roleOrder[b.role];
-            });
+                const roleDifference =
+                    roleOrder[a.role] - roleOrder[b.role];
+
+                if (roleDifference !== 0) {
+                    return roleDifference;
+                }
+
+                return a.name.localeCompare(b.name);
+                });
 
             count.textContent = `${users.length} user${users.length === 1 ? "" : "s"
                 }`;
