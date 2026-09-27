@@ -1,5 +1,5 @@
-import {CONFIG, ROLE_HOME} from "./config.js";
-import {login, register, getMe, logoutSession} from "./api.js";
+import { CONFIG, ROLE_HOME } from "./config.js";
+import { login, register, getMe, logoutSession } from "./api.js";
 
 export function getCurrentUser() {
     try {
@@ -105,9 +105,9 @@ export function initLoginPage() {
 
     document.querySelectorAll("[data-demo-email]").forEach((button) => {
         button.addEventListener("click", () => {
-        emailField.value = button.dataset.demoEmail;
-        if (button.dataset.demoPassword) form.elements.password.value = button.dataset.demoPassword;
-        form.elements.password.focus();
+            emailField.value = button.dataset.demoEmail;
+            if (button.dataset.demoPassword) form.elements.password.value = button.dataset.demoPassword;
+            form.elements.password.focus();
         });
     });
 
@@ -119,34 +119,34 @@ export function initLoginPage() {
         const password = form.elements.password.value;
         let valid = true;
         if (!validateEmail(email)) {
-        setFieldError(form, "email", "Enter a valid email address.");
-        valid = false;
+            setFieldError(form, "email", "Enter a valid email address.");
+            valid = false;
         }
         if (password.length < 8) {
-        setFieldError(form, "password", "Password must contain at least 8 characters.");
-        valid = false;
+            setFieldError(form, "password", "Password must contain at least 8 characters.");
+            valid = false;
         }
         if (!valid) return;
 
         const button = form.querySelector("button[type='submit']");
         setBusy(button, true, "Signing in…");
         try {
-        const session = await login({ email, password });
-        setSession(session);
-        const returnTo = new URLSearchParams(window.location.search).get("returnTo");
-        let safeReturn = null;
-        try {
-            const url = new URL(returnTo || "", window.location.origin);
-            const rolePrefix = `/${session.user.role.toLowerCase()}/`;
-            if (url.origin === window.location.origin && url.pathname.startsWith(rolePrefix)) {
-            safeReturn = url.pathname + url.search;
-            }
-        } catch { /* Ignore malformed or external redirect targets. */ }
-        window.location.replace(safeReturn || ROLE_HOME[session.user.role]);
+            const session = await login({ email, password });
+            setSession(session);
+            const returnTo = new URLSearchParams(window.location.search).get("returnTo");
+            let safeReturn = null;
+            try {
+                const url = new URL(returnTo || "", window.location.origin);
+                const rolePrefix = `/${session.user.role.toLowerCase()}/`;
+                if (url.origin === window.location.origin && url.pathname.startsWith(rolePrefix)) {
+                    safeReturn = url.pathname + url.search;
+                }
+            } catch { /* Ignore malformed or external redirect targets. */ }
+            window.location.replace(safeReturn || ROLE_HOME[session.user.role]);
         } catch (error) {
-        setFormMessage(form, "error", error.message || "Unable to sign in.");
+            setFormMessage(form, "error", error.message || "Unable to sign in.");
         } finally {
-        setBusy(button, false, "Signing in…");
+            setBusy(button, false, "Signing in…");
         }
     });
 }
@@ -159,41 +159,46 @@ export function initRegisterPage() {
         setFormMessage(form, "error", "");
 
         const payload = {
-        name: form.elements.name.value.trim(),
-        email: form.elements.email.value.trim(),
-        password: form.elements.password.value,
+            name: form.elements.name.value.trim(),
+            email: form.elements.email.value.trim(),
+            password: form.elements.password.value,
+            role: form.elements.role.value,
         };
         const confirmation = form.elements.confirmPassword.value;
         let valid = true;
         if (payload.name.length < 2) {
-        setFieldError(form, "name", "Enter your full name.");
-        valid = false;
+            setFieldError(form, "name", "Enter your full name.");
+            valid = false;
         }
         if (!validateEmail(payload.email)) {
-        setFieldError(form, "email", "Enter a valid email address.");
-        valid = false;
+            setFieldError(form, "email", "Enter a valid email address.");
+            valid = false;
         }
         if (payload.password.length < 8) {
-        setFieldError(form, "password", "Use at least 8 characters.");
-        valid = false;
+            setFieldError(form, "password", "Use at least 8 characters.");
+            valid = false;
         }
         if (confirmation !== payload.password) {
-        setFieldError(form, "confirmPassword", "Passwords do not match.");
-        valid = false;
+            setFieldError(form, "confirmPassword", "Passwords do not match.");
+            valid = false;
+        }
+        if (!["customer", "agent"].includes(payload.role)) {
+            setFieldError(form, "role", "Select a valid account type.");
+            valid = false;
         }
         if (!valid) return;
 
         const button = form.querySelector("button[type='submit']");
         setBusy(button, true, "Creating account…");
         try {
-        await register(payload);
-        setFormMessage(form, "success", "Account created successfully. Redirecting…");
-        sessionStorage.setItem("registered_email", payload.email);
-        window.setTimeout(() => window.location.replace("/login.html"), 650);
+            await register(payload);
+            setFormMessage(form, "success", "Account created successfully. Redirecting…");
+            sessionStorage.setItem("registered_email", payload.email);
+            window.setTimeout(() => window.location.replace("/login.html"), 650);
         } catch (error) {
-        setFormMessage(form, "error", error.message || "Unable to create your account.");
+            setFormMessage(form, "error", error.message || "Unable to create your account.");
         } finally {
-        setBusy(button, false, "Creating account…");
+            setBusy(button, false, "Creating account…");
         }
     });
 }

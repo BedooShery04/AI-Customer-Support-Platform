@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -9,28 +10,50 @@
         <link rel="stylesheet" href="../css/global.css" />
         <link rel="stylesheet" href="../css/dashboard.css" />
     </head>
-    <body data-page="customer-dashboard" data-role="customer" data-nav="dashboard" data-title="Dashboard" data-eyebrow="Customer workspace">
+
+    <body data-page="customer-dashboard" data-role="customer" data-nav="dashboard" data-title="Dashboard"
+        data-eyebrow="Customer workspace">
         <main id="page-content" class="main-content">
             <section class="welcome-panel">
-                <div><h2>Welcome back, <span data-customer-name>Customer</span></h2><p>Here’s the latest activity across your support requests.</p></div>
+                <div>
+                    <h2>Welcome back, <span data-customer-name>Customer</span></h2>
+                    <p>Here’s the latest activity across your support requests.</p>
+                </div>
                 <a class="button" href="create-ticket.html">Create a ticket</a>
             </section>
             <section id="customer-stats" class="stats-grid" aria-label="Ticket statistics"></section>
             <div class="dashboard-grid">
                 <section class="content-card">
-                <div class="card-header"><div><h2>Recent tickets</h2><p>Your most recently updated requests</p></div><a class="table-link" href="tickets.html">View all</a></div>
-                <div id="recent-tickets"></div>
+                    <div class="card-header">
+                        <div>
+                            <h2>Recent tickets</h2>
+                            <p>Your most recently updated requests</p>
+                        </div><a class="table-link" href="tickets.html">View all</a>
+                    </div>
+                    <div id="recent-tickets"></div>
                 </section>
                 <section class="content-card">
-                    <div class="card-header"><div><h2>Quick actions</h2><p>Continue where you need to go</p></div></div>
+                    <div class="card-header">
+                        <div>
+                            <h2>Quick actions</h2>
+                            <p>Continue where you need to go</p>
+                        </div>
+                    </div>
                     <div class="quick-actions">
-                        <a class="quick-action" href="create-ticket.html"><span class="quick-action-icon">＋</span><div><strong>Create Ticket</strong><span>Start a new support request</span></div><span>›</span></a>
-                        <a class="quick-action" href="tickets.html"><span class="quick-action-icon">▤</span><div><strong>View My Tickets</strong><span>Track requests and replies</span></div><span>›</span></a>
-                        <a class="quick-action" href="chatbot.html"><span class="quick-action-icon">✦</span><div><strong>Open AI Chatbot</strong><span>Ask a support question</span></div><span>›</span></a>
+                        <a class="quick-action" href="create-ticket.html"><span class="quick-action-icon">＋</span>
+                            <div><strong>Create Ticket</strong><span>Start a new support request</span></div><span>›</span>
+                        </a>
+                        <a class="quick-action" href="tickets.html"><span class="quick-action-icon">▤</span>
+                            <div><strong>View My Tickets</strong><span>Track requests and replies</span></div><span>›</span>
+                        </a>
+                        <a class="quick-action" href="chatbot.html"><span class="quick-action-icon">✦</span>
+                            <div><strong>Open AI Chatbot</strong><span>Ask a support question</span></div><span>›</span>
+                        </a>
                     </div>
                 </section>
             </div>
         </main>
         <script type="module" src="../js/app.js"></script>
     </body>
+
 </html>

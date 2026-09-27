@@ -35,7 +35,9 @@ def register(
 
     return {
         "message": "User registered successfully.",
-        "user_id": user.id
+        "user_id": user.id,
+        "role": user.role.value,
+        "status": user.status.value
     }
 
 
@@ -44,11 +46,18 @@ def login(
     login_data: LoginRequest,
     db: Session = Depends(get_db)
 ):
-    user = authenticate_user(
-        db=db,
-        email=login_data.email,
-        password=login_data.password
-    )
+    try:
+        user = authenticate_user(
+            db=db,
+            email=login_data.email,
+            password=login_data.password
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(e)
+        )
 
     if user is None:
         raise HTTPException(

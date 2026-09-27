@@ -51,12 +51,22 @@ def create_user(db: Session, user_data: UserCreate) -> User:
         user_data.password
     )
 
+    if user_data.role == UserRole.ADMIN:
+        raise ValueError(
+            "Admin accounts cannot be created through registration."
+        )
+
+    if user_data.role == UserRole.AGENT:
+        status = UserStatus.SUSPENDED
+    else:
+        status = UserStatus.ACTIVE
+
     user = User(
         name=user_data.name,
         email=user_data.email,
         password_hash=hashed_password,
-        role=UserRole.CUSTOMER,
-        status=UserStatus.ACTIVE
+        role=user_data.role,
+        status=status
     )
 
     db.add(user)

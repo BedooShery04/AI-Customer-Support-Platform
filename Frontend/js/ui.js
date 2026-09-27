@@ -1,27 +1,27 @@
-import {ROLES} from "./config.js";
-import {logout} from "./auth.js";
+import { ROLES } from "./config.js";
+import { logout } from "./auth.js";
 
 const icons = {
     dashboard:
-      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z"/></svg>',
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z"/></svg>',
     ticket:
-      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a2 2 0 0 0 0-4V5H4v3a2 2 0 0 0 0 4 2 2 0 0 0 0 4v3h16v-3a2 2 0 0 0 0-4Z"/><path d="M9 8v8"/></svg>',
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12a2 2 0 0 0 0-4V5H4v3a2 2 0 0 0 0 4 2 2 0 0 0 0 4v3h16v-3a2 2 0 0 0 0-4Z"/><path d="M9 8v8"/></svg>',
     plus:
-      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
     chat:
-      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H5l-3 2 1-5a9 9 0 1 1 18-5Z"/></svg>',
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a8 8 0 0 1-8 8H5l-3 2 1-5a9 9 0 1 1 18-5Z"/></svg>',
     users:
-      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
     agent:
-      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13v-2a8 8 0 0 1 16 0v2M18 19h-2v-6h4v4a2 2 0 0 1-2 2ZM6 19H4a2 2 0 0 1-2-2v-4h4v6ZM12 19h4"/></svg>',
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13v-2a8 8 0 0 1 16 0v2M18 19h-2v-6h4v4a2 2 0 0 1-2 2ZM6 19H4a2 2 0 0 1-2-2v-4h4v6ZM12 19h4"/></svg>',
     chart:
-      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
     logout:
-      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/></svg>',
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17l5-5-5-5M15 12H3M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/></svg>',
     menu:
-      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
     arrow:
-      '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>',
+        '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>',
 };
 
 const navigation = {
@@ -84,9 +84,8 @@ export function initials(name = "") {
 
 function navItem([page, label, href, icon], currentPage) {
     const active = page === currentPage;
-    return `<a class="nav-link${active ? " is-active" : ""}" href="${href}" ${
-        active ? 'aria-current="page"' : ""
-    }>${icons[icon]}<span>${label}</span></a>`;
+    return `<a class="nav-link${active ? " is-active" : ""}" href="${href}" ${active ? 'aria-current="page"' : ""
+        }>${icons[icon]}<span>${label}</span></a>`;
 }
 
 export function createAppShell({ user, role, currentPage, title, eyebrow }) {
@@ -159,13 +158,10 @@ export function accountBadge(status) {
 export function renderState(container, type, title, message = "") {
     if (!container) return;
     const symbols = { loading: "", empty: "○", error: "!" };
-    container.innerHTML = `<div class="state state--${type}" role="${
-        type === "error" ? "alert" : "status"
-    }"><span class="state-symbol">${
-        type === "loading" ? '<span class="spinner"></span>' : symbols[type]
-    }</span><div><strong>${escapeHTML(title)}</strong>${
-        message ? `<p>${escapeHTML(message)}</p>` : ""
-    }</div></div>`;
+    container.innerHTML = `<div class="state state--${type}" role="${type === "error" ? "alert" : "status"
+        }"><span class="state-symbol">${type === "loading" ? '<span class="spinner"></span>' : symbols[type]
+        }</span><div><strong>${escapeHTML(title)}</strong>${message ? `<p>${escapeHTML(message)}</p>` : ""
+        }</div></div>`;
 }
 
 export function showToast(message, type = "success") {
@@ -203,8 +199,8 @@ export function openConfirmDialog({
         </form>`;
         document.body.append(dialog);
         dialog.addEventListener("close", () => {
-        resolve(dialog.returnValue === "confirm");
-        dialog.remove();
+            resolve(dialog.returnValue === "confirm");
+            dialog.remove();
         });
         dialog.showModal();
     });
@@ -214,8 +210,7 @@ export function openDetailsDialog({ title, subtitle = "", content }) {
     const dialog = document.createElement("dialog");
     dialog.className = "modal modal--wide";
     dialog.innerHTML = `<div class="modal-card">
-        <div class="modal-heading"><div><h2>${escapeHTML(title)}</h2>${
-        subtitle ? `<p>${escapeHTML(subtitle)}</p>` : ""
+        <div class="modal-heading"><div><h2>${escapeHTML(title)}</h2>${subtitle ? `<p>${escapeHTML(subtitle)}</p>` : ""
         }</div><button class="icon-button" type="button" data-close aria-label="Close dialog">×</button></div>
         <div class="modal-content">${content}</div>
         <div class="modal-actions"><button class="button button--secondary" type="button" data-close>Close</button></div>
@@ -236,4 +231,4 @@ export function setButtonBusy(button, busy, label = "Working…") {
     button.textContent = busy ? label : button.dataset.label;
 }
 
-export {icons};
+export { icons };

@@ -39,13 +39,11 @@ function renderChat(container, messages) {
                     item.role === "ai" ||
                     item.role === "assistant";
 
-                return `<div class="chat-row chat-row--${
-                    isAI ? "ai" : "user"
-                }">
-                    ${
-                        isAI
-                            ? '<div class="chat-avatar" aria-hidden="true"><span></span><span></span></div>'
-                            : ""
+                return `<div class="chat-row chat-row--${isAI ? "ai" : "user"
+                    }">
+                    ${isAI
+                        ? '<div class="chat-avatar" aria-hidden="true"><span></span><span></span></div>'
+                        : ""
                     }
 
                     <div class="chat-message">

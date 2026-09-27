@@ -5,7 +5,7 @@ import {
     protectRoute,
     redirectToRoleHome,
 } from "./auth.js";
-import {createAppShell, renderState} from "./ui.js";
+import { createAppShell, renderState } from "./ui.js";
 
 import {
     initCreateTicket,
@@ -14,7 +14,7 @@ import {
     initCustomerTickets,
 } from "./customer.js";
 
-import {initChatbot, initAgentAIChat} from "./chatbot.js";
+import { initChatbot, initAgentAIChat } from "./chatbot.js";
 
 import {
     initAgentDashboard,
@@ -87,7 +87,7 @@ async function initialize() {
     const controller = controllers[page];
     if (controller) {
         Promise.resolve(controller(user)).catch((error) => {
-        console.error("Page initialization failed:", error);
+            console.error("Page initialization failed:", error);
         });
     }
 }

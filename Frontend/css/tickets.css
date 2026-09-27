@@ -222,6 +222,30 @@
     margin-top: 3px;
 }
 
+/* Ticket Actions */
+
+.ticket-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.ticket-actions .button {
+    width: 100%;
+}
+
+.button-danger {
+    color: #b42318;
+    background: #fff;
+    border: 1px solid #f3b4ae;
+}
+
+.button-danger:hover {
+    color: #912018;
+    background: #fff1f0;
+    border-color: #e9968e;
+}
+
 /* AI Suggestions */
 
 .ai-suggestion-intro {
@@ -243,6 +267,55 @@
     justify-content: flex-end;
     gap: 9px;
     margin-top: 10px;
+}
+
+/* AI Classification */
+
+.ai-classification-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.classification-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--surface-subtle);
+}
+
+.classification-item span,
+.classification-section > span {
+    color: var(--ink-muted);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.classification-item strong {
+    color: var(--ink);
+    font-size: 0.9rem;
+    overflow-wrap: anywhere;
+}
+
+.classification-section {
+    margin-bottom: 18px;
+}
+
+.classification-section p {
+    margin: 7px 0 0;
+    color: var(--ink-soft);
+    font-size: 0.84rem;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+#reclassify-ticket {
+    margin-top: 4px;
 }
 
 /* Ticket Modal */
@@ -301,5 +374,11 @@
     .message-composer-actions .button,
     .suggestion-actions .button {
         width: 100%;
+    }
+}
+
+@media (max-width: 420px) {
+    .ai-classification-grid {
+        grid-template-columns: 1fr;
     }
 }

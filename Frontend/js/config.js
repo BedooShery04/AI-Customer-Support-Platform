@@ -3,10 +3,10 @@ export const CONFIG = Object.freeze({
 		window.location.port === "5500"
 			? `${window.location.protocol}//${window.location.hostname}:8000`
 			: window.location.origin,
-	
+
 	TOKEN_STORAGE_KEY:
 		"support_platform_token",
-	
+
 	USER_STORAGE_KEY:
 		"support_platform_user"
 });

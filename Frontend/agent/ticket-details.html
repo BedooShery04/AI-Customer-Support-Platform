@@ -1,412 +1,322 @@
+
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-        />
-        <meta
-            name="description"
-            content="Support agent ticket details, conversation, controls, and AI response suggestion."
-        />
-        <title>Ticket Details | Supportly</title>
 
-        <link
-            rel="icon"
-            href="../assets/favicon.svg"
-            type="image/svg+xml"
-        />
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+        name="description"
+        content="Support agent ticket details, conversation, controls, and AI response suggestion."
+    />
 
-        <link rel="stylesheet" href="../css/global.css" />
-        <link rel="stylesheet" href="../css/tickets.css" />
-    </head>
+    <title>Ticket Details | Supportly</title>
 
-    <body
-        data-page="agent-ticket-details"
-        data-role="agent"
-        data-nav="assigned-tickets"
-        data-title="Ticket Details"
-        data-eyebrow="Support workspace"
-    >
-        <main id="page-content" class="main-content">
+    <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="../css/global.css" />
+    <link rel="stylesheet" href="../css/tickets.css" />
+</head>
 
-            <!-- =====================================================
-                 Page Heading
-            ====================================================== -->
+<body
+    data-page="agent-ticket-details"
+    data-role="agent"
+    data-nav="assigned-tickets"
+    data-title="Ticket Details"
+    data-eyebrow="Support workspace"
+>
+    <main id="page-content" class="main-content">
 
-            <div class="page-heading">
-                <div>
-                    <a
-                        class="table-link"
-                        href="assigned-tickets.html"
+        <!-- Page Heading -->
+
+        <div class="page-heading">
+            <div>
+                <a class="table-link" href="assigned-tickets.html">
+                    &larr; Back to Assigned Tickets
+                </a>
+            </div>
+        </div>
+
+        <!-- Ticket Layout -->
+
+        <div class="ticket-layout">
+
+            <!-- Main Content -->
+
+            <div class="ticket-main">
+
+                <!-- Ticket Overview -->
+
+                <section class="content-card">
+                    <div
+                        id="agent-ticket-overview"
+                        class="ticket-overview"
+                    ></div>
+                </section>
+
+                <!-- Ticket Conversation -->
+
+                <section class="content-card">
+
+                    <div class="card-header">
+                        <div>
+                            <h2>Ticket Conversation</h2>
+                            <p>
+                                Full customer and support-agent
+                                message history
+                            </p>
+                        </div>
+                    </div>
+
+                    <div
+                        id="ticket-conversation"
+                        class="conversation"
+                        aria-live="polite"
+                    ></div>
+
+                    <!-- Reply Form -->
+
+                    <form
+                        id="agent-message-form"
+                        class="message-composer"
+                        novalidate
                     >
-                        ← Back to Assigned Tickets
-                    </a>
-                </div>
+                        <label class="field">
+                            <span class="sr-only">Reply</span>
+
+                            <textarea
+                                name="message"
+                                placeholder="Write a reply to the customer…"
+                                required
+                            ></textarea>
+                        </label>
+
+                        <div class="message-composer-actions">
+                            <small
+                                class="field-error"
+                                data-error-for="message"
+                            ></small>
+
+                            <button
+                                class="button button--primary"
+                                type="submit"
+                            >
+                                Send Reply
+                            </button>
+                        </div>
+                    </form>
+
+                </section>
             </div>
 
+            <!-- Sidebar -->
 
-            <!-- =====================================================
-                 Ticket Layout
-            ====================================================== -->
+            <aside class="ticket-aside">
 
-            <div class="ticket-layout">
+                <!-- Ticket Controls -->
 
-                <!-- =================================================
-                     Main Content
-                ================================================== -->
+                <section class="content-card">
 
-                <div class="ticket-main">
+                    <div class="card-header">
+                        <div>
+                            <h2>Ticket Controls</h2>
+                            <p>Update ticket status and priority</p>
+                        </div>
+                    </div>
 
-                    <!-- Ticket Overview -->
-                    <section class="content-card">
-                        <div
-                            id="agent-ticket-overview"
-                            class="ticket-overview"
-                        ></div>
-                    </section>
+                    <form id="ticket-controls" class="control-form">
 
+                        <label class="field">
+                            <span>Status</span>
+                            <select name="status"></select>
+                        </label>
 
-                    <!-- Ticket Conversation -->
-                    <section class="content-card">
+                        <label class="field">
+                            <span>Priority</span>
+                            <select name="priority"></select>
+                        </label>
 
-                        <div class="card-header">
-                            <div>
-                                <h2>Ticket Conversation</h2>
-                                <p>
-                                    Full customer and support-agent
-                                    message history
-                                </p>
-                            </div>
+                        <div class="ticket-actions">
+                            <button
+                                class="button button--primary button--block"
+                                type="submit"
+                            >
+                                Save Changes
+                            </button>
+
+                            <button
+                                type="button"
+                                id="escalate-ticket"
+                                class="button button-danger button--block"
+                            >
+                                Escalate Ticket
+                            </button>
                         </div>
 
-                        <div
-                            id="ticket-conversation"
-                            class="conversation"
-                            aria-live="polite"
-                        ></div>
+                    </form>
+                </section>
 
+                <!-- AI Response Suggestion -->
 
-                        <!-- Reply Form -->
-                        <form
-                            id="agent-message-form"
-                            class="message-composer"
-                            novalidate
+                <section
+                    id="ai-suggestion-card"
+                    class="content-card"
+                >
+                    <div class="card-header">
+                        <div>
+                            <h2>AI Response Suggestion</h2>
+                            <p>
+                                Review every suggestion before sending
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+
+                        <p class="ai-suggestion-intro">
+                            Generate a draft based on the current
+                            ticket context.
+                        </p>
+
+                        <p
+                            id="suggestion-error"
+                            class="form-alert form-alert--error hidden"
+                            role="alert"
+                        ></p>
+
+                        <button
+                            id="generate-suggestion"
+                            class="button button--secondary button--block"
+                            type="button"
                         >
+                            Generate AI Suggestion
+                        </button>
+
+                        <div id="suggestion-panel" class="hidden">
 
                             <label class="field">
-                                <span class="sr-only">
-                                    Reply
-                                </span>
+                                <span>Editable response</span>
 
                                 <textarea
-                                    name="message"
-                                    placeholder="Write a reply to the customer…"
-                                    required
+                                    id="ai-suggestion-text"
+                                    rows="7"
                                 ></textarea>
                             </label>
 
-                            <div class="message-composer-actions">
-
-                                <small
-                                    class="field-error"
-                                    data-error-for="message"
-                                ></small>
-
-                                <button
-                                    class="button button--primary"
-                                    type="submit"
-                                >
-                                    Send Reply
-                                </button>
-
-                            </div>
-
-                        </form>
-
-                    </section>
-
-                </div>
-
-
-                <!-- =================================================
-                     Sidebar
-                ================================================== -->
-
-                <aside class="ticket-aside">
-
-
-                    <!-- =================================================
-                         Ticket Controls
-                    ================================================== -->
-
-                    <section class="content-card">
-
-                        <div class="card-header">
-                            <div>
-                                <h2>Ticket Controls</h2>
-                                <p>
-                                    Update ticket status and priority
-                                </p>
-                            </div>
-                        </div>
-
-                        <form
-                            id="ticket-controls"
-                            class="control-form"
-                        >
-
-                            <label class="field">
-                                <span>Status</span>
-                                <select name="status"></select>
-                            </label>
-
-                            <label class="field">
-                                <span>Priority</span>
-                                <select name="priority"></select>
-                            </label>
-
-                            <div class="ticket-actions">
-                                <button type="submit" class="button">
-                                    Save Changes
-                                </button>
-
-                                <button
-                                    type="button"
-                                    id="escalate-ticket"
-                                    class="button button-danger"
-                                >
-                                    Escalate Ticket
-                                </button>
-                            </div>
-
-                        </form>
-
-                    </section>
-
-
-                    <!-- =================================================
-                         AI Response Suggestion
-                    ================================================== -->
-
-                    <section
-                        id="ai-suggestion-card"
-                        class="content-card"
-                    >
-
-                        <div class="card-header">
-                            <div>
-                                <h2>AI Response Suggestion</h2>
-                                <p>
-                                    Review every suggestion before sending
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="card-body">
-
-                            <p class="ai-suggestion-intro">
-                                Generate a draft based on the current
-                                ticket context.
+                            <p class="ai-suggestion-note">
+                                <span>ⓘ</span>
+                                <span>
+                                    The suggestion is never sent
+                                    automatically. You must confirm
+                                    it below.
+                                </span>
                             </p>
 
-                            <p
-                                id="suggestion-error"
-                                class="form-alert form-alert--error hidden"
-                                role="alert"
-                            ></p>
+                            <div class="suggestion-actions">
+                                <button
+                                    id="send-suggestion"
+                                    class="button button--primary"
+                                    type="button"
+                                >
+                                    Send Response
+                                </button>
+                            </div>
+
+                        </div>
+                    </div>
+                </section>
+
+                <!-- AI Classification -->
+
+                <section
+                    id="ai-classification-card"
+                    class="content-card"
+                >
+                    <div class="card-header">
+                        <div>
+                            <h2>AI Classification</h2>
+                            <p>AI analysis of the current ticket</p>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+
+                        <!-- Classification Error -->
+
+                        <p
+                            id="classification-error"
+                            class="form-alert form-alert--error hidden"
+                            role="alert"
+                        ></p>
+
+                        <!-- Empty State -->
+
+                        <div id="classification-empty">
+
+                            <p class="ai-suggestion-intro">
+                                Analyze this ticket using AI to identify
+                                its category, priority, summary, and
+                                suggested action.
+                            </p>
 
                             <button
-                                id="generate-suggestion"
+                                id="classify-ticket"
                                 class="button button--secondary button--block"
                                 type="button"
                             >
-                                Generate AI Suggestion
+                                Classify Ticket with AI
                             </button>
 
-                            <div
-                                id="suggestion-panel"
-                                class="hidden"
-                            >
-
-                                <label class="field">
-                                    <span>Editable response</span>
-
-                                    <textarea
-                                        id="ai-suggestion-text"
-                                        rows="7"
-                                    ></textarea>
-                                </label>
-
-                                <p class="ai-suggestion-note">
-                                    <span>ⓘ</span>
-
-                                    <span>
-                                        The suggestion is never sent
-                                        automatically. You must confirm
-                                        it below.
-                                    </span>
-                                </p>
-
-                                <div class="suggestion-actions">
-
-                                    <button
-                                        id="send-suggestion"
-                                        class="button button--primary"
-                                        type="button"
-                                    >
-                                        Send Response
-                                    </button>
-
-                                </div>
-
-                            </div>
-
                         </div>
 
-                    </section>
+                        <!-- Classification Result -->
 
+                        <div id="classification-panel" class="hidden">
 
-                    <!-- =================================================
-                         AI Classification
-                    ================================================== -->
+                            <div class="ai-classification-grid">
 
-                    <section
-                        id="ai-classification-card"
-                        class="content-card"
-                    >
-
-                        <div class="card-header">
-                            <div>
-                                <h2>AI Classification</h2>
-                                <p>
-                                    AI analysis of the current ticket
-                                </p>
-                            </div>
-                        </div>
-
-                        <div class="card-body">
-
-                            <!-- Classification Error -->
-                            <p
-                                id="classification-error"
-                                class="form-alert form-alert--error hidden"
-                                role="alert"
-                            ></p>
-
-
-                            <!-- Empty State -->
-                            <div id="classification-empty">
-
-                                <p class="ai-suggestion-intro">
-                                    Analyze this ticket using AI to identify
-                                    its category, priority, summary, and
-                                    suggested action.
-                                </p>
-
-                                <button
-                                    id="classify-ticket"
-                                    class="button button--secondary button--block"
-                                    type="button"
-                                >
-                                    Classify Ticket with AI
-                                </button>
-
-                            </div>
-
-
-                            <!-- Classification Result -->
-                            <div
-                                id="classification-panel"
-                                class="hidden"
-                            >
-
-                                <!-- Category & Priority -->
-                                <div class="ai-classification-grid">
-
-                                    <div class="classification-item">
-                                        <span>Category</span>
-
-                                        <strong
-                                            id="ai-classification-category"
-                                        >
-                                            —
-                                        </strong>
-                                    </div>
-
-
-                                    <div class="classification-item">
-                                        <span>Priority</span>
-
-                                        <strong
-                                            id="ai-classification-priority"
-                                        >
-                                            —
-                                        </strong>
-                                    </div>
-
-                                </div>
-
-
-                                <!-- Summary -->
-                                <div class="classification-section">
-
-                                    <span>Summary</span>
-
-                                    <p
-                                        id="ai-classification-summary"
-                                    >
+                                <div class="classification-item">
+                                    <span>Category</span>
+                                    <strong id="ai-classification-category">
                                         —
-                                    </p>
-
+                                    </strong>
                                 </div>
 
-
-                                <!-- Suggested Action -->
-                                <div class="classification-section">
-
-                                    <span>Suggested Action</span>
-
-                                    <p
-                                        id="ai-classification-action"
-                                    >
+                                <div class="classification-item">
+                                    <span>Priority</span>
+                                    <strong id="ai-classification-priority">
                                         —
-                                    </p>
-
+                                    </strong>
                                 </div>
-
-
-                                <!-- Reclassify -->
-                                <button
-                                    id="reclassify-ticket"
-                                    class="button button--secondary button--block"
-                                    type="button"
-                                >
-                                    Reclassify with AI
-                                </button>
 
                             </div>
 
+                            <div class="classification-section">
+                                <span>Summary</span>
+                                <p id="ai-classification-summary">—</p>
+                            </div>
+
+                            <div class="classification-section">
+                                <span>Suggested Action</span>
+                                <p id="ai-classification-action">—</p>
+                            </div>
+
+                            <button
+                                id="reclassify-ticket"
+                                class="button button--secondary button--block"
+                                type="button"
+                            >
+                                Reclassify with AI
+                            </button>
+
                         </div>
+                    </div>
+                </section>
 
-                    </section>
+            </aside>
+        </div>
+    </main>
 
-                </aside>
+    <script type="module" src="../js/app.js"></script>
+</body>
 
-            </div>
-
-        </main>
-
-
-        <!-- =========================================================
-             Application Script
-        ========================================================== -->
-
-        <script
-            type="module"
-            src="../js/app.js"
-        ></script>
-
-    </body>
 </html>

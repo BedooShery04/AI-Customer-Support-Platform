@@ -14,7 +14,7 @@ export function renderStatCards(container, stats, cards) {
     if (!container) return;
     container.innerHTML = cards
         .map(
-        ({ key, label, tone = "blue", icon = "●" }) => `
+            ({ key, label, tone = "blue", icon = "●" }) => `
         <article class="stat-card">
             <div class="stat-icon stat-icon--${tone}" aria-hidden="true">${icon}</div>
             <div><span>${escapeHTML(label)}</span><strong>${stats[key] ?? 0}</strong></div>
@@ -46,7 +46,7 @@ export function renderTicketTable(
     container,
     tickets,
     { role, showCustomer = false, showAgent = true, compact = false, actionRenderer } = {},
-    ) {
+) {
     if (!container) return;
     const header = [
         "Ticket",
@@ -63,10 +63,10 @@ export function renderTicketTable(
 
     const rows = tickets
         .map((ticket) => {
-        const action = actionRenderer
-            ? actionRenderer(ticket)
-            : `<a class="table-link" href="${ticketDetailsPath(role, ticket.id)}">View</a>`;
-        return `<tr>
+            const action = actionRenderer
+                ? actionRenderer(ticket)
+                : `<a class="table-link" href="${ticketDetailsPath(role, ticket.id)}">View</a>`;
+            return `<tr>
             <td><strong class="ticket-id">${escapeHTML(ticket.id)}</strong></td>
             ${showCustomer ? `<td>${escapeHTML(ticket.customer?.name || "—")}</td>` : ""}
             <td><span class="table-subject">${escapeHTML(ticket.subject)}</span></td>
@@ -95,12 +95,10 @@ export function renderMessages(container, messages) {
     }
     container.innerHTML = messages
         .map(
-        (item) => `<article class="message message--${
-            item.senderRole === "customer" ? "customer" : "agent"
-        }">
-            <div class="message-meta"><strong>${escapeHTML(item.senderName)}</strong><span>${
-            item.senderRole === "customer" ? "Customer" : "Support Agent"
-            } · ${formatDate(item.timestamp, true)}</span></div>
+            (item) => `<article class="message message--${item.senderRole === "customer" ? "customer" : "agent"
+                }">
+            <div class="message-meta"><strong>${escapeHTML(item.senderName)}</strong><span>${item.senderRole === "customer" ? "Customer" : "Support Agent"
+                } · ${formatDate(item.timestamp, true)}</span></div>
             <p>${escapeHTML(item.message)}</p>
         </article>`,
         )
