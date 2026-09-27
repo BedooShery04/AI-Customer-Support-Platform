@@ -20,6 +20,8 @@ import {
     initAgentDashboard,
     initAgentTicketDetails,
     initAssignedTickets,
+    initAgentCustomers,
+    initAgentCustomerDetails
 } from "./agent.js";
 
 import {
@@ -35,6 +37,7 @@ const controllers = {
     "customer-tickets": initCustomerTickets,
     "customer-create-ticket": initCreateTicket,
     "customer-ticket-details": initCustomerTicketDetails,
+    
     "customer-chatbot": initChatbot,
 
     "agent-dashboard": async (user) => {
@@ -44,6 +47,8 @@ const controllers = {
     "agent-ai-assistant": initAgentAIChat,
     "agent-assigned-tickets": initAssignedTickets,
     "agent-ticket-details": initAgentTicketDetails,
+    "agent-customers": initAgentCustomers,
+    "agent-customer-details": initAgentCustomerDetails,
 
     "admin-dashboard": initAdminDashboard,
     "admin-users": initAdminUsers,
