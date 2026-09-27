@@ -167,12 +167,19 @@
                                 <select name="priority"></select>
                             </label>
 
-                            <button
-                                class="button button--primary button--block"
-                                type="submit"
-                            >
-                                Save Changes
-                            </button>
+                            <div class="ticket-actions">
+                                <button type="submit" class="button">
+                                    Save Changes
+                                </button>
+
+                                <button
+                                    type="button"
+                                    id="escalate-ticket"
+                                    class="button button-danger"
+                                >
+                                    Escalate Ticket
+                                </button>
+                            </div>
 
                         </form>
 

@@ -359,6 +359,17 @@ export const updateTicket = async (
     );
 };
 
+export const escalateTicket = async (id) =>
+    normalizeTicket(
+        await apiRequest(
+            `/tickets/${encodeURIComponent(id)}/escalate`,
+            {
+                method: "POST",
+            }
+        )
+    );
+
+
 export const deleteTicket = (id) =>
     apiRequest(
         `/tickets/${encodeURIComponent(id)}`,

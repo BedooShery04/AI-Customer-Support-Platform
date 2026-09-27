@@ -35,7 +35,18 @@ class MessageService:
             .all()
         )
 
-        return messages
+        return [
+            {
+                "id": message.id,
+                "ticket_id": message.ticket_id,
+                "sender_id": message.sender_id,
+                "sender_role": message.sender.role.value,
+                "sender_name": message.sender.name,
+                "message": message.message,
+                "created_at": message.created_at,
+            }
+            for message in messages
+        ]
 
     @staticmethod
     def create_message(

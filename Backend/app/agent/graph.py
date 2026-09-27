@@ -1,6 +1,6 @@
 import os
 
-from langchain_core.messages import SystemMessage
+from langchain_core.messages import SystemMessage, ToolMessage
 from langchain_groq import ChatGroq
 
 from langgraph.graph import START, END, MessagesState, StateGraph
@@ -12,7 +12,7 @@ from app.agent.tools import build_tools
 
 
 # =========================================================
-# 1 Create Groq Model
+# Groq Model
 # =========================================================
 
 model = ChatGroq(
@@ -22,7 +22,7 @@ model = ChatGroq(
 
 
 # =========================================================
-# 2 Build Agent Graph
+# Build Agent Graph
 # =========================================================
 
 def build_graph(
@@ -33,14 +33,10 @@ def build_graph(
     """
     Build the LangGraph workflow for the current user.
 
-    db:
-        Database session used by the tools.
-
-    user_id:
-        ID of the authenticated user.
-
-    user_role:
-        Role of the authenticated user.
+    Args:
+        db: Database session used by the tools.
+        user_id: ID of the authenticated user.
+        user_role: Role of the authenticated user.
     """
 
     # -----------------------------------------------------
@@ -54,12 +50,10 @@ def build_graph(
     )
 
     # -----------------------------------------------------
-    # Give the tools to Groq
+    # Bind tools to the AI model
     # -----------------------------------------------------
 
-    model_with_tools = model.bind_tools(
-        agent_tools
-    )
+    model_with_tools = model.bind_tools(agent_tools)
 
     # =====================================================
     # Agent Node
@@ -67,91 +61,169 @@ def build_graph(
 
     async def call_model(state: MessagesState):
         """
-        Send the conversation to Groq.
+        Send the conversation to Groq and get the AI response.
         """
 
         messages = [
-            SystemMessage(
-                content=AGENT_SYSTEM_PROMPT
-            ),
+            SystemMessage(content=AGENT_SYSTEM_PROMPT),
             *state["messages"],
         ]
 
-        response = await model_with_tools.ainvoke(
-            messages
-        )
+        response = await model_with_tools.ainvoke(messages)
 
         return {
             "messages": [response]
         }
 
     # =====================================================
-    # Decide Next Step
+    # Escalation Node
+    # =====================================================
+
+    async def escalation_node(state: MessagesState):
+        """
+        Handle ticket escalation when escalation is requested.
+        """
+
+        last_message = state["messages"][-1]
+        tool_calls = getattr(last_message, "tool_calls", None)
+
+        if not tool_calls:
+            return {"messages": []}
+
+        escalation_call = next(
+            (
+                tool_call
+                for tool_call in tool_calls
+                if tool_call["name"] == "escalate_ticket"
+            ),
+            None,
+        )
+
+        if not escalation_call:
+            return {"messages": []}
+
+        ticket_id = escalation_call["args"].get("ticket_id")
+
+        if not ticket_id:
+            return {
+                "messages": [
+                    ToolMessage(
+                        content="Ticket ID is required for escalation.",
+                        tool_call_id=escalation_call["id"],
+                    )
+                ]
+            }
+
+        escalation_tool = next(
+            tool
+            for tool in agent_tools
+            if tool.name == "escalate_ticket"
+        )
+
+        result = escalation_tool.invoke(
+            {
+                "ticket_id": ticket_id,
+            }
+        )
+
+        return {
+            "messages": [
+                ToolMessage(
+                    content=str(result),
+                    tool_call_id=escalation_call["id"],
+                )
+            ]
+        }
+
+    # =====================================================
+    # Routing
     # =====================================================
 
     def should_continue(state: MessagesState):
         """
-        Decide whether the AI wants to call a tool
-        or return the final answer.
+        Decide which node should handle the next step.
         """
 
         last_message = state["messages"][-1]
+        tool_calls = getattr(last_message, "tool_calls", None)
 
-        # AI wants to use a tool
-        if getattr(
-            last_message,
-            "tool_calls",
-            None
-        ):
-            return "tools"
+        if not tool_calls:
+            return END
 
-        # AI already produced final answer
-        return END
+        for tool_call in tool_calls:
+            if tool_call["name"] == "escalate_ticket":
+                return "escalation"
+
+        return "tools"
 
     # =====================================================
     # Create Graph
     # =====================================================
 
-    builder = StateGraph(
-        MessagesState
-    )
+    builder = StateGraph(MessagesState)
 
-    # Add AI node
+    # -----------------------------------------------------
+    # Nodes
+    # -----------------------------------------------------
+
     builder.add_node(
         "agent",
-        call_model
+        call_model,
     )
 
-    # Add tools node
     builder.add_node(
         "tools",
-        ToolNode(agent_tools)
+        ToolNode(agent_tools),
     )
 
+    builder.add_node(
+        "escalation",
+        escalation_node,
+    )
+
+    # -----------------------------------------------------
     # START → Agent
+    # -----------------------------------------------------
+
     builder.add_edge(
         START,
-        "agent"
+        "agent",
     )
 
-    # Agent → Tools OR END
+    # -----------------------------------------------------
+    # Agent → Tools / Escalation / END
+    # -----------------------------------------------------
+
     builder.add_conditional_edges(
         "agent",
         should_continue,
         {
             "tools": "tools",
+            "escalation": "escalation",
             END: END,
         },
     )
 
+    # -----------------------------------------------------
     # Tools → Agent
+    # -----------------------------------------------------
+
     builder.add_edge(
         "tools",
-        "agent"
+        "agent",
     )
 
     # -----------------------------------------------------
-    # Compile graph
+    # Escalation → Agent
+    # -----------------------------------------------------
+
+    builder.add_edge(
+        "escalation",
+        "agent",
+    )
+
+    # -----------------------------------------------------
+    # Compile
     # -----------------------------------------------------
 
     return builder.compile()

@@ -1,0 +1,80 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Customer Details | Supportly</title>
+
+    <link rel="stylesheet" href="../css/global.css" />
+    <link rel="stylesheet" href="../css/tickets.css" />
+</head>
+
+<body
+    data-page="agent-customer-details"
+    data-role="agent"
+    data-nav="customers"
+    data-title="Customer Details"
+    data-eyebrow="SUPPORT WORKSPACE"
+>
+    <main id="page-content" class="main-content">
+        <section class="page-section">
+
+            <div class="page-heading">
+                <div>
+                    <a href="customers.html" class="table-link">
+                        &larr; Back to Customers
+                    </a>
+
+                    <h2 id="customer-name">Customer Details</h2>
+                    <p id="customer-email">Loading customer...</p>
+                </div>
+            </div>
+
+            <!-- Customer Profile -->
+            <section class="customer-info-card">
+                <div class="customer-info-card__header">
+                    <h2>Customer Information</h2>
+                    <p>Profile information for this customer.</p>
+                </div>
+
+                <div class="customer-info-grid">
+                    <div class="customer-info-field">
+                        <span>Full Name</span>
+                        <strong id="customer-info-name">—</strong>
+                    </div>
+
+                    <div class="customer-info-field">
+                        <span>Email Address</span>
+                        <strong id="customer-info-email">—</strong>
+                    </div>
+
+                    <div class="customer-info-field">
+                        <span>Customer ID</span>
+                        <strong id="customer-info-id">—</strong>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Customer Ticket Statistics -->
+            <div id="customer-stats" class="customer-stats"></div>
+
+            <!-- Customer Tickets -->
+            <section class="content-card">
+                <div class="card-header">
+                    <div>
+                        <h2>Customer Tickets</h2>
+                        <p>Tickets assigned to you for this customer.</p>
+                    </div>
+                </div>
+
+                <div id="customer-tickets"></div>
+            </section>
+
+        </section>
+    </main>
+
+    <script type="module" src="../js/app.js"></script>
+</body>
+</html>
