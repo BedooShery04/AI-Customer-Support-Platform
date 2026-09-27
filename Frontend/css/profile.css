@@ -1,0 +1,152 @@
+
+/* Profile Layout */
+
+.profile-page {
+    width: min(100%, 1000px);
+}
+
+.profile-card {
+    overflow: hidden;
+}
+
+/* Profile Header */
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-subtle);
+}
+
+.profile-avatar {
+    display: grid;
+    width: 76px;
+    height: 76px;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 50%;
+    font-size: 1.5rem;
+    font-weight: 750;
+}
+
+.profile-header h2 {
+    margin: 0 0 6px;
+    color: var(--ink);
+    font-size: 1.4rem;
+}
+
+.profile-header p {
+    margin: 0 0 12px;
+    color: var(--ink-muted);
+    font-size: 0.85rem;
+    overflow-wrap: anywhere;
+}
+
+.profile-role {
+    display: inline-flex;
+    padding: 6px 12px;
+    border-radius: 20px;
+    color: var(--primary);
+    background: var(--primary-soft);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+/* Personal Information */
+
+.profile-section-heading {
+    padding: 26px 28px 0;
+}
+
+.profile-section-heading h2 {
+    margin: 0;
+    color: var(--ink);
+    font-size: 1.1rem;
+}
+
+.profile-section-heading p {
+    margin: 6px 0 0;
+    color: var(--ink-muted);
+    font-size: 0.85rem;
+}
+
+#profile-form {
+    padding: 24px 28px 28px;
+}
+
+#profile-message {
+    margin-bottom: 20px;
+}
+
+.profile-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+}
+
+.profile-info-field {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+.profile-info-field > span {
+    color: var(--ink-muted);
+    font-size: 0.82rem;
+}
+
+.profile-info-field strong {
+    color: var(--ink);
+    font-size: 0.92rem;
+    overflow-wrap: anywhere;
+}
+
+/* Form Actions */
+
+.profile-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+}
+
+/* Responsive */
+
+@media (max-width: 720px) {
+    .profile-header {
+        padding: 22px;
+    }
+
+    .profile-section-heading {
+        padding: 22px 22px 0;
+    }
+
+    #profile-form {
+        padding: 22px;
+    }
+
+    .profile-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .profile-actions {
+        flex-direction: column-reverse;
+    }
+
+    .profile-actions .button {
+        width: 100%;
+    }
+}

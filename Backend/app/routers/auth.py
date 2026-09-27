@@ -85,5 +85,6 @@ def get_me(
         "name": current_user.name,
         "email": current_user.email,
         "role": current_user.role.value,
-        "status": current_user.status.value
+        "status": current_user.status.value,
+        "created_at": current_user.created_at
     }

@@ -37,6 +37,44 @@ def get_all_users(
     return get_users(db)
 
 
+
+
+
+@router.put(
+    "/me",
+    response_model=UserResponse
+)
+def update_my_profile(
+    user_data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if user_data.role is not None or user_data.status is not None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You cannot change your role or account status."
+        )
+
+    if user_data.email is not None:
+        if (
+            current_user.email != user_data.email
+            and get_user_by_email(db, user_data.email)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="A user with this email already exists."
+            )
+
+    return update_user(
+        db=db,
+        user=current_user,
+        name=user_data.name,
+        email=user_data.email,
+        role=None,
+        status=None
+    )
+
+
 # =========================================================
 # Get one user
 # Authenticated users

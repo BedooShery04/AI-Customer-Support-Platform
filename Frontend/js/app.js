@@ -32,6 +32,9 @@ import {
     initStatistics,
 } from "./admin.js";
 
+
+import { initMyProfile } from "./profile.js";
+
 const controllers = {
     "customer-dashboard": initCustomerDashboard,
     "customer-tickets": initCustomerTickets,
@@ -55,6 +58,8 @@ const controllers = {
     "admin-agents": initAdminAgents,
     "admin-tickets": initAdminTickets,
     "admin-statistics": initStatistics,
+
+    "my-profile": initMyProfile,
 };
 
 async function initialize() {
@@ -74,14 +79,16 @@ async function initialize() {
         return;
     }
 
-    const user = await protectRoute(role);
+    const user = await protectRoute(role || undefined);
+
     if (!user) return;
+
     createAppShell({
         user,
-        role,
+        role: role || user.role,
         currentPage: nav,
         title: title || document.title,
-        eyebrow,
+        eyebrow
     });
 
     const controller = controllers[page];

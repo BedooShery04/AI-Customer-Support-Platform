@@ -22,6 +22,8 @@ const icons = {
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>',
     arrow:
         '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"/></svg>',
+    profile:
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21v-2a8 8 0 0 1 16 0v2"/></svg>',
 };
 
 const navigation = {
@@ -30,11 +32,13 @@ const navigation = {
         ["tickets", "My Tickets", "/customer/tickets.html", "ticket"],
         ["create-ticket", "Create Ticket", "/customer/create-ticket.html", "plus"],
         ["chatbot", "AI Chatbot", "/customer/chatbot.html", "chat"],
+        ["profile", "My Profile", "/profile.html", "profile"],
     ],
     [ROLES.AGENT]: [
         ["dashboard", "Dashboard", "/agent/dashboard.html", "dashboard"],
         ["assigned-tickets", "Assigned Tickets", "/agent/assigned-tickets.html", "ticket"],
         ["customers", "Customers", "/agent/customers.html", "users"],
+        ["profile", "My Profile", "/profile.html", "profile"],
     ],
     [ROLES.ADMIN]: [
         ["dashboard", "Dashboard", "/admin/dashboard.html", "dashboard"],
@@ -42,15 +46,15 @@ const navigation = {
         ["agents", "Agents", "/admin/agents.html", "agent"],
         ["tickets", "Tickets", "/admin/tickets.html", "ticket"],
         ["statistics", "Statistics", "/admin/statistics.html", "chart"],
+        ["profile", "My Profile", "/profile.html", "profile"],
     ],
 };
 
 const roleLabels = {
-    CUSTOMER: "Customer",
-    AGENT: "Support Agent",
-    ADMIN: "Administrator",
+    customer: "Customer",
+    agent: "Support Agent",
+    admin: "Administrator",
 };
-
 export function escapeHTML(value = "") {
     return String(value)
         .replaceAll("&", "&amp;")

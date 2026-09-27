@@ -246,6 +246,15 @@ export const getMe = async () =>
         await apiRequest("/auth/me")
     );
 
+
+export const updateMyProfile = async (changes) =>
+    normalizeUser(
+        await apiRequest("/users/me", {
+            method: "PUT",
+            body: changes,
+        })
+    );
+    
 export const logoutSession = () =>
     Promise.resolve(null);
 
