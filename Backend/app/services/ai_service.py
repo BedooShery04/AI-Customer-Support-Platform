@@ -1,3 +1,4 @@
+
 from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
@@ -20,6 +21,8 @@ from app.models.ai_classification import TicketAIClassification
 from app.models.audit_log import AuditLog
 from app.models.message import Message
 from app.models.pending_ticket_draft import PendingTicketDraft
+from app.models.pending_ticket_update import PendingTicketUpdate
+from app.models.ticket import Ticket
 from app.models.user import User
 from app.schemas.ai_classification import (
     AIClassificationContent,
@@ -35,6 +38,10 @@ CONFIRMATIONS = {
     "yes create them",
     "confirm",
     "confirmed",
+    "confirm update",
+    "confirm edit",
+    "save changes",
+    "yes save changes",
     "create it",
     "create them",
     "ايوه",
@@ -46,6 +53,8 @@ CONFIRMATIONS = {
     "أكد",
     "اعملها",
     "اعملهم",
+    "احفظ التعديل",
+    "احفظ التعديلات",
 }
 
 CANCELLATIONS = {
@@ -53,6 +62,8 @@ CANCELLATIONS = {
     "cancel",
     "cancel it",
     "cancel them",
+    "cancel update",
+    "cancel edit",
     "don't create it",
     "don't create them",
     "لا",
@@ -61,6 +72,8 @@ CANCELLATIONS = {
     "إلغاء",
     "الغي",
     "إلغي",
+    "الغي التعديل",
+    "إلغي التعديل",
 }
 
 DRAFT_EXPIRY = timedelta(minutes=30)
@@ -80,7 +93,7 @@ class AIService:
 
     @staticmethod
     def _draft_expired(
-        draft: PendingTicketDraft,
+        draft: PendingTicketDraft | PendingTicketUpdate,
     ) -> bool:
         created_at = draft.created_at
 
@@ -141,9 +154,7 @@ class AIService:
         if customer is None:
             raise HTTPException(
                 status_code=404,
-                detail=(
-                    "Draft customer no longer exists."
-                ),
+                detail="Draft customer no longer exists.",
             )
 
         return "\n".join([
@@ -156,6 +167,50 @@ class AIService:
                 draft.tickets
             ),
         ])
+
+    @staticmethod
+    def _format_ticket_update(
+        db: Session,
+        draft: PendingTicketUpdate,
+    ) -> str:
+        ticket = db.get(
+            Ticket,
+            draft.ticket_id,
+        )
+
+        if ticket is None:
+            return (
+                "The ticket for this draft no longer exists. "
+                "Cancel the draft before starting another edit."
+            )
+
+        lines = [
+            f"Please review your changes to ticket #{ticket.id}:"
+        ]
+
+        if draft.subject is not None:
+            lines.extend([
+                "",
+                f"Current subject: {ticket.subject}",
+                f"New subject: {draft.subject}",
+            ])
+
+        if draft.description is not None:
+            lines.extend([
+                "",
+                f"Current description: {ticket.description}",
+                f"New description: {draft.description}",
+            ])
+
+        lines.extend([
+            "",
+            "No changes have been applied yet.",
+            "Reply 'Confirm' to save these changes, "
+            "or 'Cancel' to discard them.",
+            "You can also tell me what to change.",
+        ])
+
+        return "\n".join(lines)
 
     @staticmethod
     def _save_chat_reply(
@@ -220,7 +275,7 @@ class AIService:
         return conversation
 
     # =====================================================
-    # Confirm Ticket Draft
+    # Confirm Ticket Creation Draft
     # =====================================================
 
     @staticmethod
@@ -269,6 +324,39 @@ class AIService:
         )
 
     # =====================================================
+    # Confirm Ticket Update Draft
+    # =====================================================
+
+    @staticmethod
+    def _confirm_ticket_update(
+        db: Session,
+        user_id: int,
+        user_role: UserRole,
+        message: str,
+    ) -> dict:
+        try:
+            ticket = ticket_service.confirm_customer_ticket_update(
+                db=db,
+                user_id=user_id,
+                user_role=user_role,
+                is_expired=AIService._draft_expired,
+            )
+
+            reply = (
+                f"Ticket #{ticket.id} was updated successfully."
+            )
+
+        except HTTPException as exc:
+            reply = str(exc.detail)
+
+        return AIService._save_chat_reply(
+            db=db,
+            user_id=user_id,
+            user_message=message,
+            assistant_message=reply,
+        )
+
+    # =====================================================
     # Chat with AI Agent
     # =====================================================
 
@@ -288,54 +376,135 @@ class AIService:
                 detail="Message cannot be empty.",
             )
 
-        normalized = AIService._normalize(
-            text
-        )
+        normalized = AIService._normalize(text)
 
+        # Load both types of pending drafts.
         draft = db.get(
             PendingTicketDraft,
             user_id,
         )
 
-        # The backend handles cancellation directly.
-        if (
-            draft is not None
-            and normalized in CANCELLATIONS
-        ):
-            db.delete(draft)
-            db.commit()
+        edit_draft = db.get(
+            PendingTicketUpdate,
+            user_id,
+        )
 
-            return AIService._save_chat_reply(
-                db,
-                user_id,
-                message,
-                "Your draft has been cancelled. "
-                "No tickets were created.",
-            )
-
-        # Confirmation is never delegated to the LLM.
-        if normalized in CONFIRMATIONS:
-            return AIService._confirm_draft(
-                db=db,
-                user_id=user_id,
-                user_role=user_role,
-                message=message,
-            )
-
-        # Remove expired drafts before AI processing.
-        if (
+        # Remove expired drafts before processing commands.
+        expired_creation = (
             draft is not None
             and AIService._draft_expired(draft)
-        ):
-            db.delete(draft)
+        )
+
+        expired_edit = (
+            edit_draft is not None
+            and AIService._draft_expired(edit_draft)
+        )
+
+        if expired_creation or expired_edit:
+            if expired_creation:
+                db.delete(draft)
+                draft = None
+
+            if expired_edit:
+                db.delete(edit_draft)
+                edit_draft = None
+
             db.commit()
-            draft = None
+
+            if normalized in CONFIRMATIONS:
+                return AIService._save_chat_reply(
+                    db=db,
+                    user_id=user_id,
+                    user_message=message,
+                    assistant_message=(
+                        "Your pending draft has expired. "
+                        "Please submit your request again."
+                    ),
+                )
+
+        # Never guess which operation should be confirmed.
+        if draft is not None and edit_draft is not None:
+            if (
+                normalized in CONFIRMATIONS
+                or normalized in CANCELLATIONS
+            ):
+                return AIService._save_chat_reply(
+                    db=db,
+                    user_id=user_id,
+                    user_message=message,
+                    assistant_message=(
+                        "You have both a ticket creation draft "
+                        "and a ticket edit draft. "
+                        "Please specify which operation you "
+                        "want to confirm or cancel."
+                    ),
+                )
+
+        # The backend handles cancellation directly.
+        if normalized in CANCELLATIONS:
+            if draft is not None:
+                db.delete(draft)
+                db.commit()
+
+                return AIService._save_chat_reply(
+                    db=db,
+                    user_id=user_id,
+                    user_message=message,
+                    assistant_message=(
+                        "Your ticket creation draft "
+                        "has been cancelled. "
+                        "No tickets were created."
+                    ),
+                )
+
+            if edit_draft is not None:
+                db.delete(edit_draft)
+                db.commit()
+
+                return AIService._save_chat_reply(
+                    db=db,
+                    user_id=user_id,
+                    user_message=message,
+                    assistant_message=(
+                        "Your ticket edit draft "
+                        "has been cancelled. "
+                        "No changes were applied."
+                    ),
+                )
+
+        # Confirmation is handled by the backend.
+        if normalized in CONFIRMATIONS:
+            if edit_draft is not None:
+                return AIService._confirm_ticket_update(
+                    db=db,
+                    user_id=user_id,
+                    user_role=user_role,
+                    message=message,
+                )
+
+            if draft is not None:
+                return AIService._confirm_draft(
+                    db=db,
+                    user_id=user_id,
+                    user_role=user_role,
+                    message=message,
+                )
+
+            return AIService._save_chat_reply(
+                db=db,
+                user_id=user_id,
+                user_message=message,
+                assistant_message=(
+                    "There is no pending operation to confirm."
+                ),
+            )
 
         conversation = AIService._load_conversation(
             db=db,
             user_id=user_id,
         )
 
+        # Capture the current creation draft state.
         previous = (
             (
                 draft.customer_id,
@@ -346,11 +515,23 @@ class AIService:
             else None
         )
 
+        # Capture the current edit draft state.
+        previous_edit = (
+            (
+                edit_draft.ticket_id,
+                edit_draft.subject,
+                edit_draft.description,
+                edit_draft.created_at,
+            )
+            if edit_draft is not None
+            else None
+        )
+
         if draft is not None:
             conversation.append(
                 SystemMessage(
                     content=(
-                        "There is a pending ticket draft:\n"
+                        "There is a pending ticket creation draft:\n"
                         + AIService._format_pending_draft(
                             db,
                             draft,
@@ -359,6 +540,24 @@ class AIService:
                         "new draft using the appropriate "
                         "role-specific proposal tool. "
                         "Do not create actual tickets."
+                    )
+                )
+            )
+
+        if edit_draft is not None:
+            conversation.append(
+                SystemMessage(
+                    content=(
+                        "There is a pending ticket edit draft:\n"
+                        + AIService._format_ticket_update(
+                            db,
+                            edit_draft,
+                        )
+                        + "\nFor revisions, use "
+                        "propose_ticket_update to save the "
+                        "complete revised proposal. "
+                        "Do not apply changes directly. "
+                        "The backend handles confirmation."
                     )
                 )
             )
@@ -393,7 +592,7 @@ class AIService:
             messages[-1].content
         )
 
-        # Refresh the session after tool execution.
+        # Refresh after tool execution.
         db.expire_all()
 
         updated = db.get(
@@ -401,6 +600,12 @@ class AIService:
             user_id,
         )
 
+        updated_edit = db.get(
+            PendingTicketUpdate,
+            user_id,
+        )
+
+        # Show a newly created or revised creation draft.
         if updated is not None:
             current = (
                 updated.customer_id,
@@ -412,6 +617,21 @@ class AIService:
                 reply = AIService._format_pending_draft(
                     db,
                     updated,
+                )
+
+        # Show a newly created or revised edit draft.
+        if updated_edit is not None:
+            current_edit = (
+                updated_edit.ticket_id,
+                updated_edit.subject,
+                updated_edit.description,
+                updated_edit.created_at,
+            )
+
+            if previous_edit != current_edit:
+                reply = AIService._format_ticket_update(
+                    db,
+                    updated_edit,
                 )
 
         return AIService._save_chat_reply(

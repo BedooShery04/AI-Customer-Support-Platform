@@ -12,6 +12,8 @@ from app.models.pending_ticket_draft import PendingTicketDraft
 from app.models.ticket import Ticket
 from app.models.user import User
 from app.schemas.ticket import TicketCreate, TicketUpdate
+from app.models.pending_ticket_update import PendingTicketUpdate
+
 
 
 DAILY_TICKET_LIMIT = 5
@@ -459,7 +461,95 @@ def confirm_ticket_draft(
 
     except Exception:
         db.rollback()
+
         raise
+
+
+
+
+
+def update_customer_ticket(
+    ticket_id: int,
+    user_id: int,
+    user_role: UserRole,
+    db: Session,
+    subject: str | None = None,
+    description: str | None = None,
+) -> Ticket:
+    if user_role != UserRole.CUSTOMER:
+        raise HTTPException(
+            status_code=403,
+            detail="Only customers can update their own tickets.",
+        )
+
+    if subject is None and description is None:
+        raise HTTPException(
+            status_code=422,
+            detail="Provide a subject or description to update.",
+        )
+
+    ticket = (
+        db.query(Ticket)
+        .filter(Ticket.id == ticket_id)
+        .with_for_update()
+        .first()
+    )
+
+    if ticket is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Ticket not found.",
+        )
+
+    if ticket.customer_id != user_id:
+        raise HTTPException(
+            status_code=403,
+            detail="You cannot update another customer's ticket.",
+        )
+
+    ticket_status = getattr(ticket.status, "value", ticket.status)
+
+    if ticket_status != "Open":
+        raise HTTPException(
+            status_code=409,
+            detail="Only open tickets can be edited by customers.",
+        )
+
+    if subject is not None:
+        subject = subject.strip()
+
+        if not 5 <= len(subject) <= 200:
+            raise HTTPException(
+                status_code=422,
+                detail="Subject must contain between 5 and 200 characters.",
+            )
+
+        ticket.subject = subject
+
+    if description is not None:
+        description = description.strip()
+
+        if not 10 <= len(description) <= 5000:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Description must contain between "
+                    "10 and 5000 characters."
+                ),
+            )
+
+        ticket.description = description
+
+    try:
+        db.commit()
+        db.refresh(ticket)
+        return ticket
+
+    except Exception:
+        db.rollback()
+        raise
+
+
 
 
 # ============================================================
@@ -584,3 +674,122 @@ def delete_ticket(
 
     db.delete(ticket)
     db.commit()
+
+
+
+
+
+
+
+def confirm_customer_ticket_update(
+    db: Session,
+    user_id: int,
+    user_role: UserRole,
+    is_expired,
+) -> Ticket:
+    if user_role != UserRole.CUSTOMER:
+        raise HTTPException(
+            status_code=403,
+            detail="Only customers can confirm ticket edits.",
+        )
+
+    try:
+        draft = (
+            db.query(PendingTicketUpdate)
+            .filter(PendingTicketUpdate.user_id == user_id)
+            .with_for_update()
+            .first()
+        )
+
+        if draft is None:
+            raise HTTPException(
+                status_code=404,
+                detail="There is no pending ticket edit.",
+            )
+
+        if is_expired(draft):
+            db.delete(draft)
+            db.commit()
+
+            raise HTTPException(
+                status_code=410,
+                detail="Your ticket edit draft has expired.",
+            )
+
+        customer = db.get(User, user_id)
+
+        if (
+            customer is None
+            or customer.role != UserRole.CUSTOMER
+            or customer.status != UserStatus.ACTIVE
+        ):
+            raise HTTPException(
+                status_code=403,
+                detail="Your account cannot edit tickets.",
+            )
+
+        ticket = (
+            db.query(Ticket)
+            .filter(Ticket.id == draft.ticket_id)
+            .with_for_update()
+            .first()
+        )
+
+        if ticket is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Ticket not found.",
+            )
+
+        if ticket.customer_id != user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="You cannot edit this ticket.",
+            )
+
+        current_status = getattr(
+            ticket.status, "value", ticket.status
+        )
+
+        if current_status != "Open":
+            raise HTTPException(
+                status_code=409,
+                detail="Only open tickets can be edited.",
+            )
+
+        if draft.subject is not None:
+            subject = draft.subject.strip()
+
+            if not 5 <= len(subject) <= 200:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Invalid ticket subject.",
+                )
+
+            ticket.subject = subject
+
+        if draft.description is not None:
+            description = draft.description.strip()
+
+            if not 10 <= len(description) <= 5000:
+                raise HTTPException(
+                    status_code=422,
+                    detail="Invalid ticket description.",
+                )
+
+            ticket.description = description
+
+        db.delete(draft)
+        db.commit()
+        db.refresh(ticket)
+
+        return ticket
+
+    except HTTPException as exc:
+        if exc.status_code != 410:
+            db.rollback()
+        raise
+
+    except Exception:
+        db.rollback()
+        raise

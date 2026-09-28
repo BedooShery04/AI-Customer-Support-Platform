@@ -1,3 +1,4 @@
+
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
@@ -10,6 +11,7 @@ from app.enums import UserRole
 from app.enums.user import UserStatus
 from app.models.audit_log import AuditLog
 from app.models.pending_ticket_draft import PendingTicketDraft
+from app.models.pending_ticket_update import PendingTicketUpdate
 from app.models.user import User
 from app.schemas.ticket import TicketCreate, TicketUpdate
 from app.services import ticket_service
@@ -27,26 +29,40 @@ class ProposedTicket(BaseModel):
     )
 
 
-def _ticket_to_dict(ticket):
-    return {
+def _ticket_to_dict(
+    ticket,
+    include_priority: bool = True,
+):
+    """
+    Convert a ticket to a dictionary.
+
+    Priority is hidden from customer-facing AI tools.
+    """
+    data = {
         "id": ticket.id,
         "customer_id": ticket.customer_id,
         "assigned_agent_id": ticket.assigned_agent_id,
         "subject": ticket.subject,
         "description": ticket.description,
         "category": ticket.category.value,
-        "priority": ticket.priority.value,
         "status": ticket.status.value,
         "classification_status": ticket.classification_status,
         "created_at": (
             ticket.created_at.isoformat()
-            if ticket.created_at else None
+            if ticket.created_at
+            else None
         ),
         "updated_at": (
             ticket.updated_at.isoformat()
-            if ticket.updated_at else None
+            if ticket.updated_at
+            else None
         ),
     }
+
+    if include_priority:
+        data["priority"] = ticket.priority.value
+
+    return data
 
 
 def _error_result(exc: HTTPException):
@@ -64,6 +80,9 @@ def build_tools(
 ):
     """
     Build tools according to the authenticated user's role.
+
+    The authenticated role and user ID must come from
+    the backend, never from the chat message.
     """
 
     verified_customer_ids: set[int] = set()
@@ -74,7 +93,11 @@ def build_tools(
 
     @tool
     def get_customer_tickets():
-        """Retrieve the authenticated customer's tickets."""
+        """
+        Retrieve all tickets owned by the authenticated
+        customer. Use this tool when a customer identifies
+        a ticket by its subject instead of its ID.
+        """
         try:
             tickets = ticket_service.get_customer_tickets(
                 customer_id=user_id,
@@ -86,12 +109,16 @@ def build_tools(
             return {
                 "success": True,
                 "tickets": [
-                    _ticket_to_dict(ticket)
+                    _ticket_to_dict(
+                        ticket,
+                        include_priority=False,
+                    )
                     for ticket in tickets
                 ],
             }
 
         except HTTPException as exc:
+            db.rollback()
             return _error_result(exc)
 
     # ====================================================
@@ -100,7 +127,12 @@ def build_tools(
 
     @tool
     def get_ticket_details(ticket_id: int):
-        """Retrieve an accessible ticket's details."""
+        """
+        Retrieve an accessible ticket's details.
+
+        Customers can retrieve only their own tickets.
+        Agents and admins follow backend access rules.
+        """
         try:
             ticket = ticket_service.get_ticket(
                 ticket_id=ticket_id,
@@ -111,10 +143,16 @@ def build_tools(
 
             return {
                 "success": True,
-                "ticket": _ticket_to_dict(ticket),
+                "ticket": _ticket_to_dict(
+                    ticket,
+                    include_priority=(
+                        user_role != UserRole.CUSTOMER
+                    ),
+                ),
             }
 
         except HTTPException as exc:
+            db.rollback()
             return _error_result(exc)
 
     # ====================================================
@@ -126,13 +164,15 @@ def build_tools(
         tickets: list[ProposedTicket],
     ):
         """
-        Save customer ticket drafts.
+        Save customer ticket creation drafts.
 
         This tool never creates actual tickets.
+        Backend confirmation is required.
         """
         if user_role != UserRole.CUSTOMER:
             return {
                 "success": False,
+                "status_code": 403,
                 "message": (
                     "Only customers can propose "
                     "their own tickets."
@@ -148,6 +188,18 @@ def build_tools(
             }
 
         try:
+            if db.get(
+                PendingTicketUpdate,
+                user_id,
+            ) is not None:
+                return {
+                    "success": False,
+                    "message": (
+                        "Please confirm or cancel your "
+                        "pending ticket edit first."
+                    ),
+                }
+
             validated = [
                 TicketCreate(
                     subject=item.subject,
@@ -166,6 +218,7 @@ def build_tools(
                     user_id=user_id,
                     customer_id=None,
                     tickets=validated,
+                    created_at=datetime.now(timezone.utc),
                 )
 
                 db.add(draft)
@@ -214,6 +267,7 @@ def build_tools(
         if user_role != UserRole.AGENT:
             return {
                 "success": False,
+                "status_code": 403,
                 "message": (
                     "Only agents can look up customers."
                 ),
@@ -259,13 +313,15 @@ def build_tools(
         tickets: list[ProposedTicket],
     ):
         """
-        Save drafts for a verified customer.
+        Save ticket creation drafts for a verified customer.
 
-        The agent must confirm before creation.
+        The authenticated agent must confirm before
+        the tickets are actually created.
         """
         if user_role != UserRole.AGENT:
             return {
                 "success": False,
+                "status_code": 403,
                 "message": (
                     "Only agents can use this tool."
                 ),
@@ -323,6 +379,7 @@ def build_tools(
                     user_id=user_id,
                     customer_id=customer.id,
                     tickets=validated,
+                    created_at=datetime.now(timezone.utc),
                 )
 
                 db.add(draft)
@@ -368,7 +425,9 @@ def build_tools(
 
     @tool
     def check_ticket_status(ticket_id: int):
-        """Check an accessible ticket's current status."""
+        """
+        Check an accessible ticket's current status.
+        """
         try:
             ticket = ticket_service.get_ticket(
                 ticket_id=ticket_id,
@@ -387,10 +446,11 @@ def build_tools(
             }
 
         except HTTPException as exc:
+            db.rollback()
             return _error_result(exc)
 
     # ====================================================
-    # Update Ticket
+    # Staff Ticket Update
     # ====================================================
 
     @tool
@@ -402,7 +462,8 @@ def build_tools(
         """
         Update ticket priority or status.
 
-        Only authorized agents and admins.
+        Only authorized agents and admins can
+        perform these operations.
         """
         if user_role not in (
             UserRole.AGENT,
@@ -410,9 +471,10 @@ def build_tools(
         ):
             return {
                 "success": False,
+                "status_code": 403,
                 "message": (
                     "Only agents and admins "
-                    "can update tickets."
+                    "can update ticket priority or status."
                 ),
             }
 
@@ -455,6 +517,8 @@ def build_tools(
             }
 
         except ValidationError:
+            db.rollback()
+
             return {
                 "success": False,
                 "message": (
@@ -463,6 +527,7 @@ def build_tools(
             }
 
         except HTTPException as exc:
+            db.rollback()
             return _error_result(exc)
 
     # ====================================================
@@ -479,6 +544,7 @@ def build_tools(
         if user_role != UserRole.AGENT:
             return {
                 "success": False,
+                "status_code": 403,
                 "message": (
                     "Only agents can escalate tickets."
                 ),
@@ -522,6 +588,195 @@ def build_tools(
             raise
 
     # ====================================================
+    # Customer Ticket Edit Proposal
+    # ====================================================
+
+    @tool
+    def propose_ticket_update(
+        ticket_id: int,
+        subject: str | None = None,
+        description: str | None = None,
+    ):
+        """
+        Prepare changes to the authenticated customer's
+        own open ticket.
+
+        Never apply changes directly.
+        Save a draft and require backend confirmation.
+
+        When revising a pending draft for the same ticket,
+        omitted fields retain their previously proposed
+        values.
+        """
+        if user_role != UserRole.CUSTOMER:
+            return {
+                "success": False,
+                "status_code": 403,
+                "message": (
+                    "Only customers can edit "
+                    "their own tickets."
+                ),
+            }
+
+        if subject is None and description is None:
+            return {
+                "success": False,
+                "message": (
+                    "Provide a subject or description."
+                ),
+            }
+
+        try:
+            ticket = ticket_service.get_ticket(
+                ticket_id=ticket_id,
+                user_id=user_id,
+                user_role=user_role,
+                db=db,
+            )
+
+            current_status = getattr(
+                ticket.status,
+                "value",
+                ticket.status,
+            )
+
+            if str(current_status).casefold() != "open":
+                return {
+                    "success": False,
+                    "status_code": 409,
+                    "message": (
+                        "Only open tickets can be edited."
+                    ),
+                }
+
+            # Prevent ambiguous confirmation between
+            # creating tickets and editing a ticket.
+            if db.get(
+                PendingTicketDraft,
+                user_id,
+            ) is not None:
+                return {
+                    "success": False,
+                    "message": (
+                        "Please confirm or cancel your "
+                        "pending ticket creation first."
+                    ),
+                }
+
+            draft = db.get(
+                PendingTicketUpdate,
+                user_id,
+            )
+
+            # Allow revisions to the same ticket only.
+            if (
+                draft is not None
+                and draft.ticket_id != ticket.id
+            ):
+                return {
+                    "success": False,
+                    "message": (
+                        "You already have a pending edit "
+                        f"for ticket #{draft.ticket_id}. "
+                        "Please confirm or cancel it first."
+                    ),
+                }
+
+            # Preserve previously proposed fields when
+            # the customer revises only one field.
+            new_subject = (
+                subject
+                if subject is not None
+                else (
+                    draft.subject
+                    if draft is not None
+                    else None
+                )
+            )
+
+            new_description = (
+                description
+                if description is not None
+                else (
+                    draft.description
+                    if draft is not None
+                    else None
+                )
+            )
+
+            # Validate the proposed subject.
+            if new_subject is not None:
+                new_subject = new_subject.strip()
+
+                if not 5 <= len(new_subject) <= 200:
+                    return {
+                        "success": False,
+                        "message": (
+                            "Subject must be "
+                            "5–200 characters."
+                        ),
+                    }
+
+            # Validate the proposed description.
+            if new_description is not None:
+                new_description = new_description.strip()
+
+                if not 10 <= len(new_description) <= 5000:
+                    return {
+                        "success": False,
+                        "message": (
+                            "Description must be "
+                            "10–5000 characters."
+                        ),
+                    }
+
+            # Create a new draft or revise the
+            # existing draft for this ticket.
+            if draft is None:
+                draft = PendingTicketUpdate(
+                    user_id=user_id,
+                    ticket_id=ticket.id,
+                    subject=new_subject,
+                    description=new_description,
+                    created_at=datetime.now(
+                        timezone.utc
+                    ),
+                )
+
+                db.add(draft)
+
+            else:
+                draft.subject = new_subject
+                draft.description = new_description
+                draft.created_at = datetime.now(
+                    timezone.utc
+                )
+
+            db.commit()
+
+            return {
+                "success": True,
+                "message": (
+                    "Ticket edit draft saved. "
+                    "Customer confirmation is required."
+                ),
+                "ticket_id": ticket.id,
+                "old_subject": ticket.subject,
+                "old_description": ticket.description,
+                "new_subject": new_subject,
+                "new_description": new_description,
+                "changes_applied": False,
+            }
+
+        except HTTPException as exc:
+            db.rollback()
+            return _error_result(exc)
+
+        except Exception:
+            db.rollback()
+            raise
+
+    # ====================================================
     # Role-Specific Tools
     # ====================================================
 
@@ -534,6 +789,7 @@ def build_tools(
         return [
             get_customer_tickets,
             propose_tickets,
+            propose_ticket_update,
             *common,
         ]
 
