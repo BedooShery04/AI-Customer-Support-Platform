@@ -4,3 +4,4 @@ from app.models.message import Message
 from app.models.ai_classification import TicketAIClassification
 from app.models.audit_log import AuditLog
 from app.models.ai_chat_message import AIChatMessage
+from app.models.pending_ticket_draft import PendingTicketDraft
