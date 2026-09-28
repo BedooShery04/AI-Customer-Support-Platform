@@ -23,12 +23,16 @@ export function renderStatCards(container, stats, cards) {
         .join("");
 }
 
-export function ticketDetailsPath(role, ticketId) {
+export function ticketDetailsPath(role, ticketId, displayId = null) {
     const id = encodeURIComponent(ticketId);
 
     if (role === "customer") {
+        const display = displayId !== null
+            ? `&displayId=${encodeURIComponent(displayId)}`
+            : "";
+
         return new URL(
-            `../customer/ticket-details.html?id=${id}`,
+            `../customer/ticket-details.html?id=${id}${display}`,
             import.meta.url
         ).href;
     }
@@ -42,12 +46,14 @@ export function ticketDetailsPath(role, ticketId) {
 
     return "#";
 }
+
 export function renderTicketTable(
     container,
     tickets,
     { role, showCustomer = false, showAgent = true, compact = false, actionRenderer } = {},
 ) {
     if (!container) return;
+
     const header = [
         "Ticket",
         ...(showCustomer ? ["Customer"] : []),
@@ -62,12 +68,22 @@ export function renderTicketTable(
     ];
 
     const rows = tickets
-        .map((ticket) => {
+        .map((ticket, index) => {
+            const displayTicketId =
+                role === "customer"
+                    ? index + 1
+                    : ticket.id;
+
             const action = actionRenderer
                 ? actionRenderer(ticket)
-                : `<a class="table-link" href="${ticketDetailsPath(role, ticket.id)}">View</a>`;
+                : `<a class="table-link" href="${ticketDetailsPath(
+                    role,
+                    ticket.id,
+                    role === "customer" ? displayTicketId : null
+                )}">View</a>`;
+
             return `<tr>
-            <td><strong class="ticket-id">${escapeHTML(ticket.id)}</strong></td>
+            <td><strong class="ticket-id">${escapeHTML(displayTicketId)}</strong></td>
             ${showCustomer ? `<td>${escapeHTML(ticket.customer?.name || "—")}</td>` : ""}
             <td><span class="table-subject">${escapeHTML(ticket.subject)}</span></td>
             ${compact ? "" : `<td>${escapeHTML(ticket.category)}</td>`}
@@ -82,7 +98,7 @@ export function renderTicketTable(
         .join("");
 
     container.innerHTML = `<div class="table-scroll"><table>
-        <thead><tr>${header.map((label) => `<th>${label}</th>`).join("")}</tr></thead>
+        <thead><tr>${header.map((label) => `<th>${label}</th>`).join("")}</thead>
         <tbody>${rows}</tbody>
     </table></div>`;
 }

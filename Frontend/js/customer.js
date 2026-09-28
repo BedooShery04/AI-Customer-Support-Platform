@@ -131,13 +131,35 @@ async function submitTicketPayload(payload, { form, button, redirect = true } = 
         if (form) {
             const message = form.querySelector("[data-form-message]");
             message.className = "form-alert form-alert--success";
-            message.textContent = `${ticket.id} was created successfully.`;
+            message.textContent = `Ticket created successfully.`;
             form.reset();
         }
         showToast("Ticket created successfully.");
         if (redirect) {
-            window.setTimeout(() => {
-                window.location.href = `/customer/ticket-details.html?id=${encodeURIComponent(ticket.id)}`;
+            window.setTimeout(async () => {
+                try {
+                    const tickets = await getTickets();
+
+                    const ticketIndex = tickets.findIndex(
+                        (item) => item.id === ticket.id
+                    );
+
+                    const displayId =
+                        ticketIndex !== -1
+                            ? ticketIndex + 1
+                            : tickets.length;
+
+                    window.location.href =
+                        `/customer/ticket-details.html?id=${encodeURIComponent(
+                            ticket.id
+                        )}&displayId=${encodeURIComponent(displayId)}`;
+                } catch {
+                    // Fallback: open the ticket using its real DB ID
+                    window.location.href =
+                        `/customer/ticket-details.html?id=${encodeURIComponent(
+                            ticket.id
+                        )}`;
+                }
             }, 500);
         }
         return ticket;
@@ -238,10 +260,10 @@ export function initCreateTicket() {
     });
 }
 
-function renderTicketOverview(container, ticket) {
+function renderTicketOverview(container, ticket, displayId) {
     container.innerHTML = `
     <div class="ticket-heading-row">
-      <div><span class="ticket-id">${escapeHTML(ticket.id)}</span><h2>${escapeHTML(
+      <div><span class="ticket-id">${escapeHTML(displayId)}</span><h2>${escapeHTML(
         ticket.subject,
     )}</h2></div>
       <div class="badge-group">${priorityBadge(ticket.priority)}${statusBadge(
@@ -276,6 +298,8 @@ function renderAIClassification(container, classification) {
 
 export async function initCustomerTicketDetails() {
     const ticketId = getQueryTicketId();
+    const params = new URLSearchParams(window.location.search);
+    const displayId = params.get("displayId") || ticketId;
     const overview = document.querySelector("#ticket-overview");
     const conversation = document.querySelector("#ticket-conversation");
     const ai = document.querySelector("#ai-classification");
@@ -292,7 +316,7 @@ export async function initCustomerTicketDetails() {
             getTicketById(ticketId),
             getTicketMessages(ticketId),
         ]);
-        renderTicketOverview(overview, ticket);
+        renderTicketOverview(overview, ticket, displayId);
         renderAIClassification(ai, ticket.aiClassification);
         renderMessages(conversation, messages);
 
