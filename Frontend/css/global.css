@@ -1159,3 +1159,13 @@ tbody tr:hover {
         animation-iteration-count: 1 !important;
     }
 }
+
+.topbar-profile {
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+}
+
+.sidebar-user {
+    cursor: pointer;
+}

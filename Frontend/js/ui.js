@@ -126,10 +126,13 @@ export function createAppShell({ user, role, currentPage, title, eyebrow }) {
             <h1>${escapeHTML(title)}</h1>
             </div>
             <div class="topbar-actions">
-            <div class="topbar-profile">
+            <a class="topbar-profile" href="/profile.html">
                 <div class="avatar avatar--small">${initials(user.name)}</div>
-                <div><strong>${escapeHTML(user.name)}</strong><span>${roleLabels[user.role]}</span></div>
-            </div>
+                <div>
+                    <strong>${escapeHTML(user.name)}</strong>
+                    <span>${roleLabels[user.role]}</span>
+                </div>
+            </a>
             </div>
         </header>
         </div>`;
@@ -141,6 +144,11 @@ export function createAppShell({ user, role, currentPage, title, eyebrow }) {
     shell.querySelector("[data-sidebar-open]")?.addEventListener("click", openSidebar);
     shell.querySelector("[data-sidebar-close]")?.addEventListener("click", closeSidebar);
     shell.querySelector("[data-logout]")?.addEventListener("click", logout);
+    shell.querySelector(".sidebar-user")?.addEventListener("click", (event) => {
+        if (event.target.closest("[data-logout]")) return;
+
+        window.location.href = "/profile.html";
+    });
     shell.querySelectorAll(".nav-link").forEach((link) => {
         link.addEventListener("click", closeSidebar);
     });
