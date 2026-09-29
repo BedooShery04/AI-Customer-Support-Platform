@@ -1,3 +1,4 @@
+
 from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, ForeignKey, Integer, JSON
@@ -12,6 +13,12 @@ class PendingTicketDraft(Base):
     user_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
+    chat_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("ai_chats.id", ondelete="CASCADE"),
         primary_key=True,
     )
 

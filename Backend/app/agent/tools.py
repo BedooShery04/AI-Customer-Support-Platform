@@ -76,16 +76,15 @@ def _error_result(exc: HTTPException):
 def build_tools(
     db: Session,
     user_id: int,
+    chat_id: int,
     user_role: UserRole,
 ):
     """
     Build tools according to the authenticated user's role.
 
-    The authenticated role and user ID must come from
-    the backend, never from the chat message.
+    The user ID, chat ID and role are supplied by the
+    backend and must never come from the AI model.
     """
-
-  
 
     # ====================================================
     # Customer Tickets
@@ -164,7 +163,7 @@ def build_tools(
         tickets: list[ProposedTicket],
     ):
         """
-        Save customer ticket creation drafts.
+        Save customer ticket creation drafts in this chat.
 
         This tool never creates actual tickets.
         Backend confirmation is required.
@@ -188,9 +187,10 @@ def build_tools(
             }
 
         try:
+            # Prevent conflicting operations in this chat.
             if db.get(
                 PendingTicketUpdate,
-                user_id,
+                (user_id, chat_id),
             ) is not None:
                 return {
                     "success": False,
@@ -208,14 +208,16 @@ def build_tools(
                 for item in tickets
             ]
 
+            # Find the creation draft for this chat only.
             draft = db.get(
                 PendingTicketDraft,
-                user_id,
+                (user_id, chat_id),
             )
 
             if draft is None:
                 draft = PendingTicketDraft(
                     user_id=user_id,
+                    chat_id=chat_id,
                     customer_id=None,
                     tickets=validated,
                     created_at=datetime.now(timezone.utc),
@@ -290,8 +292,6 @@ def build_tools(
                 "message": "Active customer not found.",
             }
 
-
-
         return {
             "success": True,
             "customer": {
@@ -305,18 +305,18 @@ def build_tools(
     # Create Draft on Behalf of Customer
     # ====================================================
 
-    
     @tool
     def propose_tickets_on_behalf(
         customer_email: str,
         tickets: list[ProposedTicket],
     ):
         """
-        Save ticket creation drafts for an active customer.
+        Save ticket creation drafts for an active customer
+        in the agent's currently selected chat.
 
-        Verify the customer's exact email again before
-        saving the draft. Actual ticket creation requires
-        explicit confirmation by the authenticated agent.
+        Verify the customer's exact email before saving.
+        Actual ticket creation requires explicit agent
+        confirmation.
         """
         if user_role != UserRole.AGENT:
             return {
@@ -350,7 +350,9 @@ def build_tools(
                 return {
                     "success": False,
                     "status_code": 403,
-                    "message": "Only active agents can create drafts.",
+                    "message": (
+                        "Only active agents can create drafts."
+                    ),
                 }
 
             customer = (
@@ -369,7 +371,11 @@ def build_tools(
                     "message": "Active customer not found.",
                 }
 
-            if db.get(PendingTicketUpdate, user_id) is not None:
+            # Check only the selected chat.
+            if db.get(
+                PendingTicketUpdate,
+                (user_id, chat_id),
+            ) is not None:
                 return {
                     "success": False,
                     "message": (
@@ -386,20 +392,28 @@ def build_tools(
                 for item in tickets
             ]
 
-            draft = db.get(PendingTicketDraft, user_id)
+            draft = db.get(
+                PendingTicketDraft,
+                (user_id, chat_id),
+            )
 
             if draft is None:
                 draft = PendingTicketDraft(
                     user_id=user_id,
+                    chat_id=chat_id,
                     customer_id=customer.id,
                     tickets=validated,
                     created_at=datetime.now(timezone.utc),
                 )
+
                 db.add(draft)
+
             else:
                 draft.customer_id = customer.id
                 draft.tickets = validated
-                draft.created_at = datetime.now(timezone.utc)
+                draft.created_at = datetime.now(
+                    timezone.utc
+                )
 
             db.commit()
 
@@ -420,6 +434,7 @@ def build_tools(
 
         except ValidationError:
             db.rollback()
+
             return {
                 "success": False,
                 "message": "Invalid ticket details.",
@@ -428,6 +443,7 @@ def build_tools(
         except Exception:
             db.rollback()
             raise
+
     # ====================================================
     # Check Ticket Status
     # ====================================================
@@ -608,7 +624,7 @@ def build_tools(
     ):
         """
         Prepare changes to the authenticated customer's
-        own open ticket.
+        own open ticket in the currently selected chat.
 
         Never apply changes directly.
         Save a draft and require backend confirmation.
@@ -658,11 +674,10 @@ def build_tools(
                     ),
                 }
 
-            # Prevent ambiguous confirmation between
-            # creating tickets and editing a ticket.
+            # Prevent conflicting operations in this chat.
             if db.get(
                 PendingTicketDraft,
-                user_id,
+                (user_id, chat_id),
             ) is not None:
                 return {
                     "success": False,
@@ -674,7 +689,7 @@ def build_tools(
 
             draft = db.get(
                 PendingTicketUpdate,
-                user_id,
+                (user_id, chat_id),
             )
 
             # Allow revisions to the same ticket only.
@@ -691,8 +706,7 @@ def build_tools(
                     ),
                 }
 
-            # Preserve previously proposed fields when
-            # the customer revises only one field.
+            # Preserve previously proposed fields.
             new_subject = (
                 subject
                 if subject is not None
@@ -713,7 +727,6 @@ def build_tools(
                 )
             )
 
-            # Validate the proposed subject.
             if new_subject is not None:
                 new_subject = new_subject.strip()
 
@@ -722,11 +735,10 @@ def build_tools(
                         "success": False,
                         "message": (
                             "Subject must be "
-                            "5–200 characters."
+                            "5-200 characters."
                         ),
                     }
 
-            # Validate the proposed description.
             if new_description is not None:
                 new_description = new_description.strip()
 
@@ -735,15 +747,15 @@ def build_tools(
                         "success": False,
                         "message": (
                             "Description must be "
-                            "10–5000 characters."
+                            "10-5000 characters."
                         ),
                     }
 
-            # Create a new draft or revise the
-            # existing draft for this ticket.
+            # Create or revise the draft in this chat.
             if draft is None:
                 draft = PendingTicketUpdate(
                     user_id=user_id,
+                    chat_id=chat_id,
                     ticket_id=ticket.id,
                     subject=new_subject,
                     description=new_description,

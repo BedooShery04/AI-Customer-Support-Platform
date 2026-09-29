@@ -16,6 +16,12 @@ class PendingTicketUpdate(Base):
         primary_key=True,
     )
 
+    chat_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("ai_chats.id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
     ticket_id: Mapped[int] = mapped_column(
         Integer,
         ForeignKey("tickets.id", ondelete="CASCADE"),

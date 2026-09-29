@@ -421,11 +421,212 @@ export const sendTicketMessage = async (
     );
 
 
+
 /* =========================
    AI Chat
 ========================= */
 
+const normalizeChat = (chat) => ({
+    ...chat,
+
+    createdAt:
+        chat.created_at ??
+        chat.createdAt,
+
+    updatedAt:
+        chat.updated_at ??
+        chat.updatedAt,
+});
+
+const normalizeChatMessage = (message) => ({
+    ...message,
+
+    role:
+        message.role === "assistant"
+            ? "ai"
+            : message.role,
+
+    timestamp:
+        message.created_at ??
+        message.timestamp,
+});
+
+
+/* =========================
+   Chat Management
+========================= */
+
+// Create a new chat.
+export const createChat = async (
+    title = "New Chat"
+) =>
+    normalizeChat(
+        await apiRequest(
+            "/ai/chats",
+            {
+                method: "POST",
+                body: {
+                    title,
+                },
+            }
+        )
+    );
+
+
+// Get all chats belonging to the current user.
+export const getChats = async () =>
+    (
+        await apiRequest("/ai/chats")
+    ).map(normalizeChat);
+
+
+// Get details of a specific chat.
+export const getChatById = async (
+    chatId
+) =>
+    normalizeChat(
+        await apiRequest(
+            `/ai/chats/${encodeURIComponent(chatId)}`
+        )
+    );
+
+
+// Rename an existing chat.
+export const renameChat = async (
+    chatId,
+    title
+) =>
+    normalizeChat(
+        await apiRequest(
+            `/ai/chats/${encodeURIComponent(chatId)}`,
+            {
+                method: "PATCH",
+                body: {
+                    title,
+                },
+            }
+        )
+    );
+
+
+// Delete a chat and its messages.
+export const deleteChat = (
+    chatId
+) =>
+    apiRequest(
+        `/ai/chats/${encodeURIComponent(chatId)}`,
+        {
+            method: "DELETE",
+        }
+    );
+
+
+/* =========================
+   Chat Messages
+========================= */
+
+// Get messages belonging to one chat.
+export const getChatMessages = async (
+    chatId
+) =>
+    (
+        await apiRequest(
+            `/ai/chats/${encodeURIComponent(chatId)}/messages`
+        )
+    ).map(normalizeChatMessage);
+
+
+
+
+
+/* =========================
+   Chat Pending Operation
+========================= */
+
+const normalizePendingOperation = (operation) => {
+    if (!operation) {
+        return null;
+    }
+
+    const base = {
+        type: operation.type,
+        status: operation.status,
+
+        expiresAt:
+            operation.expires_at ??
+            operation.expiresAt,
+    };
+
+    if (operation.type === "ticket_creation") {
+        return {
+            ...base,
+
+            customer: operation.customer,
+
+            tickets: (operation.tickets || []).map(
+                ticket => ({
+                    subject: ticket.subject,
+                    description: ticket.description,
+                })
+            ),
+        };
+    }
+
+    if (operation.type === "ticket_update") {
+        return {
+            ...base,
+
+            ticketId:
+                operation.ticket_id ??
+                operation.ticketId,
+
+            currentSubject:
+                operation.current_subject ??
+                operation.currentSubject,
+
+            currentDescription:
+                operation.current_description ??
+                operation.currentDescription,
+
+            newSubject:
+                operation.new_subject ??
+                operation.newSubject,
+
+            newDescription:
+                operation.new_description ??
+                operation.newDescription,
+        };
+    }
+
+    return null;
+};
+
+
+// Get the current pending operation for one chat.
+export const getChatPendingOperation = async (
+    chatId
+) => {
+    const response = await apiRequest(
+        `/ai/chats/${encodeURIComponent(chatId)}/pending-operation`
+    );
+
+    return {
+        chatId:
+            response.chat_id ??
+            response.chatId,
+
+        pendingOperation:
+            normalizePendingOperation(
+                response.pending_operation ??
+                response.pendingOperation
+            ),
+    };
+};
+
+
+// Send a message to a specific chat.
 export const sendChatMessage = async (
+    chatId,
     message
 ) => {
     const response = await apiRequest(
@@ -433,6 +634,7 @@ export const sendChatMessage = async (
         {
             method: "POST",
             body: {
+                chat_id: chatId,
                 message,
             },
         }
@@ -446,8 +648,10 @@ export const sendChatMessage = async (
     };
 };
 
-export const getChatMessages = () =>
-    apiRequest("/ai/chat/messages");
+
+/* =========================
+   AI Response Suggestion
+========================= */
 
 export const generateAIResponseSuggestion = (
     id

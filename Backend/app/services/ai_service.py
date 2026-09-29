@@ -16,6 +16,7 @@ from app.agent.prompts import (
     AI_RESPONSE_SUGGESTION_PROMPT,
 )
 from app.enums import UserRole
+from app.models.ai_chat import AIChat
 from app.models.ai_chat_message import AIChatMessage
 from app.models.ai_classification import TicketAIClassification
 from app.models.audit_log import AuditLog
@@ -90,6 +91,29 @@ class AIService:
         return " ".join(
             text.strip().casefold().split()
         ).rstrip(".!،؟?")
+
+    @staticmethod
+    def _get_user_chat(
+        db: Session,
+        user_id: int,
+        chat_id: int,
+    ) -> AIChat:
+        chat = (
+            db.query(AIChat)
+            .filter(
+                AIChat.id == chat_id,
+                AIChat.user_id == user_id,
+            )
+            .first()
+        )
+
+        if chat is None:
+            raise HTTPException(
+                status_code=404,
+                detail="Chat not found.",
+            )
+
+        return chat
 
     @staticmethod
     def _draft_expired(
@@ -216,37 +240,50 @@ class AIService:
     def _save_chat_reply(
         db: Session,
         user_id: int,
+        chat_id: int,
         user_message: str,
         assistant_message: str,
     ) -> dict:
         db.add_all([
             AIChatMessage(
                 user_id=user_id,
+                chat_id=chat_id,
                 role="user",
                 message=user_message,
             ),
             AIChatMessage(
                 user_id=user_id,
+                chat_id=chat_id,
                 role="assistant",
                 message=assistant_message,
             ),
         ])
 
+        chat = AIService._get_user_chat(
+            db=db,
+            user_id=user_id,
+            chat_id=chat_id,
+        )
+
+        chat.updated_at = datetime.utcnow()
+
         db.commit()
 
         return {
-            "message": assistant_message
+            "message": assistant_message,
         }
 
     @staticmethod
     def _load_conversation(
         db: Session,
         user_id: int,
+        chat_id: int,
     ) -> list:
         stored = (
             db.query(AIChatMessage)
             .filter(
-                AIChatMessage.user_id == user_id
+                AIChatMessage.user_id == user_id,
+                AIChatMessage.chat_id == chat_id,
             )
             .order_by(
                 AIChatMessage.id.desc()
@@ -282,6 +319,7 @@ class AIService:
     def _confirm_draft(
         db: Session,
         user_id: int,
+        chat_id: int,
         user_role: UserRole,
         message: str,
     ) -> dict:
@@ -289,6 +327,7 @@ class AIService:
             created = ticket_service.confirm_ticket_draft(
                 db=db,
                 user_id=user_id,
+                chat_id=chat_id,
                 user_role=user_role,
                 is_expired=AIService._draft_expired,
             )
@@ -319,6 +358,7 @@ class AIService:
         return AIService._save_chat_reply(
             db=db,
             user_id=user_id,
+            chat_id=chat_id,
             user_message=message,
             assistant_message=reply,
         )
@@ -331,6 +371,7 @@ class AIService:
     def _confirm_ticket_update(
         db: Session,
         user_id: int,
+        chat_id: int,
         user_role: UserRole,
         message: str,
     ) -> dict:
@@ -338,6 +379,7 @@ class AIService:
             ticket = ticket_service.confirm_customer_ticket_update(
                 db=db,
                 user_id=user_id,
+                chat_id=chat_id,
                 user_role=user_role,
                 is_expired=AIService._draft_expired,
             )
@@ -352,6 +394,7 @@ class AIService:
         return AIService._save_chat_reply(
             db=db,
             user_id=user_id,
+            chat_id=chat_id,
             user_message=message,
             assistant_message=reply,
         )
@@ -364,6 +407,7 @@ class AIService:
     async def chat(
         db: Session,
         user_id: int,
+        chat_id: int,
         user_role: UserRole,
         message: str,
         history: list | None = None,
@@ -376,20 +420,25 @@ class AIService:
                 detail="Message cannot be empty.",
             )
 
+        AIService._get_user_chat(
+            db=db,
+            user_id=user_id,
+            chat_id=chat_id,
+        )
+
         normalized = AIService._normalize(text)
 
-        # Load both types of pending drafts.
+        # Load pending operations from this chat only.
         draft = db.get(
             PendingTicketDraft,
-            user_id,
+            (user_id, chat_id),
         )
 
         edit_draft = db.get(
             PendingTicketUpdate,
-            user_id,
+            (user_id, chat_id),
         )
 
-        # Remove expired drafts before processing commands.
         expired_creation = (
             draft is not None
             and AIService._draft_expired(draft)
@@ -415,6 +464,7 @@ class AIService:
                 return AIService._save_chat_reply(
                     db=db,
                     user_id=user_id,
+                    chat_id=chat_id,
                     user_message=message,
                     assistant_message=(
                         "Your pending draft has expired. "
@@ -422,7 +472,7 @@ class AIService:
                     ),
                 )
 
-        # Never guess which operation should be confirmed.
+        # Do not guess when both operation types exist.
         if draft is not None and edit_draft is not None:
             if (
                 normalized in CONFIRMATIONS
@@ -431,16 +481,17 @@ class AIService:
                 return AIService._save_chat_reply(
                     db=db,
                     user_id=user_id,
+                    chat_id=chat_id,
                     user_message=message,
                     assistant_message=(
                         "You have both a ticket creation draft "
-                        "and a ticket edit draft. "
+                        "and a ticket edit draft in this chat. "
                         "Please specify which operation you "
                         "want to confirm or cancel."
                     ),
                 )
 
-        # The backend handles cancellation directly.
+        # Cancel only drafts belonging to this chat.
         if normalized in CANCELLATIONS:
             if draft is not None:
                 db.delete(draft)
@@ -449,6 +500,7 @@ class AIService:
                 return AIService._save_chat_reply(
                     db=db,
                     user_id=user_id,
+                    chat_id=chat_id,
                     user_message=message,
                     assistant_message=(
                         "Your ticket creation draft "
@@ -464,6 +516,7 @@ class AIService:
                 return AIService._save_chat_reply(
                     db=db,
                     user_id=user_id,
+                    chat_id=chat_id,
                     user_message=message,
                     assistant_message=(
                         "Your ticket edit draft "
@@ -472,12 +525,13 @@ class AIService:
                     ),
                 )
 
-        # Confirmation is handled by the backend.
+        # Confirm only drafts belonging to this chat.
         if normalized in CONFIRMATIONS:
             if edit_draft is not None:
                 return AIService._confirm_ticket_update(
                     db=db,
                     user_id=user_id,
+                    chat_id=chat_id,
                     user_role=user_role,
                     message=message,
                 )
@@ -486,6 +540,7 @@ class AIService:
                 return AIService._confirm_draft(
                     db=db,
                     user_id=user_id,
+                    chat_id=chat_id,
                     user_role=user_role,
                     message=message,
                 )
@@ -493,18 +548,20 @@ class AIService:
             return AIService._save_chat_reply(
                 db=db,
                 user_id=user_id,
+                chat_id=chat_id,
                 user_message=message,
                 assistant_message=(
-                    "There is no pending operation to confirm."
+                    "There is no pending operation "
+                    "to confirm in this chat."
                 ),
             )
 
         conversation = AIService._load_conversation(
             db=db,
             user_id=user_id,
+            chat_id=chat_id,
         )
 
-        # Capture the current creation draft state.
         previous = (
             (
                 draft.customer_id,
@@ -515,7 +572,6 @@ class AIService:
             else None
         )
 
-        # Capture the current edit draft state.
         previous_edit = (
             (
                 edit_draft.ticket_id,
@@ -531,7 +587,8 @@ class AIService:
             conversation.append(
                 SystemMessage(
                     content=(
-                        "There is a pending ticket creation draft:\n"
+                        "There is a pending ticket creation "
+                        "draft in this chat:\n"
                         + AIService._format_pending_draft(
                             db,
                             draft,
@@ -548,7 +605,8 @@ class AIService:
             conversation.append(
                 SystemMessage(
                     content=(
-                        "There is a pending ticket edit draft:\n"
+                        "There is a pending ticket edit "
+                        "draft in this chat:\n"
                         + AIService._format_ticket_update(
                             db,
                             edit_draft,
@@ -568,9 +626,12 @@ class AIService:
             )
         )
 
+        # The graph and its tools must also receive chat_id.
+        # Update build_graph in the next step.
         graph = build_graph(
             db=db,
             user_id=user_id,
+            chat_id=chat_id,
             user_role=user_role,
         )
 
@@ -578,41 +639,46 @@ class AIService:
             "messages": conversation,
         })
 
-        messages = result.get(
+        result_messages = result.get(
             "messages",
             [],
         )
 
-        if not messages:
+        if not result_messages:
             raise RuntimeError(
                 "AI Agent returned no messages."
             )
 
         reply = str(
-            messages[-1].content
+            result_messages[-1].content
         )
 
-        # Refresh after tool execution.
+        # Reload drafts created or revised by the tools.
         db.expire_all()
 
         updated = db.get(
             PendingTicketDraft,
-            user_id,
+            (user_id, chat_id),
         )
 
         updated_edit = db.get(
             PendingTicketUpdate,
-            user_id,
+            (user_id, chat_id),
         )
 
-        # Always display the actual saved draft when one exists.
         if updated is not None:
-            reply = AIService._format_pending_draft(
-                db,
-                updated,
+            current = (
+                updated.customer_id,
+                list(updated.tickets),
+                updated.created_at,
             )
 
-        # Show a newly created or revised edit draft.
+            if previous != current:
+                reply = AIService._format_pending_draft(
+                    db,
+                    updated,
+                )
+
         if updated_edit is not None:
             current_edit = (
                 updated_edit.ticket_id,
@@ -630,6 +696,7 @@ class AIService:
         return AIService._save_chat_reply(
             db=db,
             user_id=user_id,
+            chat_id=chat_id,
             user_message=message,
             assistant_message=reply,
         )
@@ -642,11 +709,19 @@ class AIService:
     def get_chat_history(
         db: Session,
         user_id: int,
+        chat_id: int,
     ):
+        AIService._get_user_chat(
+            db=db,
+            user_id=user_id,
+            chat_id=chat_id,
+        )
+
         return (
             db.query(AIChatMessage)
             .filter(
-                AIChatMessage.user_id == user_id
+                AIChatMessage.user_id == user_id,
+                AIChatMessage.chat_id == chat_id,
             )
             .order_by(
                 AIChatMessage.created_at.asc(),
@@ -769,9 +844,7 @@ class AIService:
             AuditLog(
                 admin_id=user_id,
                 ticket_id=ticket_id,
-                action=(
-                    "AI response suggestion generated"
-                ),
+                action="AI response suggestion generated",
             )
         )
 
@@ -932,3 +1005,126 @@ class AIService:
         return AIClassificationResponse.model_validate(
             existing
         )
+
+
+    
+    @staticmethod
+    def get_pending_operation(
+        db: Session,
+        user_id: int,
+        chat_id: int,
+    ) -> dict:
+        AIService._get_user_chat(
+            db=db,
+            user_id=user_id,
+            chat_id=chat_id,
+        )
+
+        creation_draft = db.get(
+            PendingTicketDraft,
+            (user_id, chat_id),
+        )
+
+        update_draft = db.get(
+            PendingTicketUpdate,
+            (user_id, chat_id),
+        )
+
+        # Remove expired drafts from the selected chat.
+        expired = False
+
+        for draft in (creation_draft, update_draft):
+            if (
+                draft is not None
+                and AIService._draft_expired(draft)
+            ):
+                db.delete(draft)
+                expired = True
+
+                if draft is creation_draft:
+                    creation_draft = None
+                else:
+                    update_draft = None
+
+        if expired:
+            db.commit()
+
+        if creation_draft is not None:
+            customer = None
+
+            if creation_draft.customer_id is not None:
+                user = db.get(
+                    User,
+                    creation_draft.customer_id,
+                )
+
+                if user is not None:
+                    customer = {
+                        "id": user.id,
+                        "name": user.name,
+                        "email": user.email,
+                    }
+
+            created_at = creation_draft.created_at
+
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(
+                    tzinfo=timezone.utc
+                )
+
+            return {
+                "chat_id": chat_id,
+                "pending_operation": {
+                    "type": "ticket_creation",
+                    "status": "pending",
+                    "expires_at": (
+                        created_at + DRAFT_EXPIRY
+                    ).isoformat(),
+                    "customer": customer,
+                    "tickets": creation_draft.tickets,
+                },
+            }
+
+        if update_draft is not None:
+            ticket = db.get(
+                Ticket,
+                update_draft.ticket_id,
+            )
+
+            created_at = update_draft.created_at
+
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(
+                    tzinfo=timezone.utc
+                )
+
+            return {
+                "chat_id": chat_id,
+                "pending_operation": {
+                    "type": "ticket_update",
+                    "status": "pending",
+                    "expires_at": (
+                        created_at + DRAFT_EXPIRY
+                    ).isoformat(),
+                    "ticket_id": update_draft.ticket_id,
+                    "current_subject": (
+                        ticket.subject
+                        if ticket is not None
+                        else None
+                    ),
+                    "current_description": (
+                        ticket.description
+                        if ticket is not None
+                        else None
+                    ),
+                    "new_subject": update_draft.subject,
+                    "new_description": (
+                        update_draft.description
+                    ),
+                },
+            }
+
+        return {
+            "chat_id": chat_id,
+            "pending_operation": None,
+        }
