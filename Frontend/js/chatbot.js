@@ -3,6 +3,7 @@ import {
     createChat,
     getChats,
     getChatMessages,
+    getChatPendingOperation,
     renameChat,
     deleteChat,
     sendChatMessage,
@@ -17,6 +18,10 @@ import {
 
 import { registerPageTool } from "./webmcp.js";
 
+
+/* =========================
+   Message Formatting
+========================= */
 
 function formatAIMessage(message) {
     let text = escapeHTML(String(message || ""));
@@ -45,8 +50,12 @@ function formatAIMessage(message) {
 }
 
 
+/* =========================
+   Chat Messages
+========================= */
+
 function renderChat(container, messages) {
-    container.innerHTML = messages.map((item) => {
+    container.innerHTML = messages.map(item => {
         const isAI =
             item.role === "ai" ||
             item.role === "assistant";
@@ -55,10 +64,15 @@ function renderChat(container, messages) {
             <div class="chat-row chat-row--${isAI ? "ai" : "user"}">
                 ${
                     isAI
-                        ? `<div class="chat-avatar" aria-hidden="true">
-                               <span></span>
-                               <span></span>
-                           </div>`
+                        ? `
+                            <div
+                                class="chat-avatar"
+                                aria-hidden="true"
+                            >
+                                <span></span>
+                                <span></span>
+                            </div>
+                        `
                         : ""
                 }
 
@@ -74,9 +88,14 @@ function renderChat(container, messages) {
                     }</p>
 
                     <time>
-                        ${item.timestamp
-                            ? formatDate(item.timestamp, true)
-                            : ""}
+                        ${
+                            item.timestamp
+                                ? formatDate(
+                                    item.timestamp,
+                                    true
+                                )
+                                : ""
+                        }
                     </time>
                 </div>
             </div>
@@ -116,6 +135,257 @@ function appendTyping(container) {
 }
 
 
+/* =========================
+   Pending Draft Formatting
+========================= */
+
+function renderCreationDraft(operation) {
+    const tickets = operation.tickets || [];
+
+    const customer = operation.customer
+        ? `
+            <div class="ai-draft-customer">
+                <span class="ai-draft-field-label">
+                    Creating tickets on behalf of
+                </span>
+
+                <strong>
+                    ${escapeHTML(operation.customer.name)}
+                </strong>
+
+                <span>
+                    ${escapeHTML(operation.customer.email)}
+                </span>
+            </div>
+        `
+        : "";
+
+    return `
+        ${customer}
+
+        <div class="ai-draft-tickets">
+            ${tickets.map((ticket, index) => `
+                <section class="ai-draft-ticket">
+                    <span class="ai-draft-ticket-number">
+                        Ticket ${index + 1}
+                    </span>
+
+                    <div class="ai-draft-field">
+                        <span class="ai-draft-field-label">
+                            Subject
+                        </span>
+
+                        <strong>
+                            ${escapeHTML(ticket.subject)}
+                        </strong>
+                    </div>
+
+                    <div class="ai-draft-field">
+                        <span class="ai-draft-field-label">
+                            Description
+                        </span>
+
+                        <p>
+                            ${escapeHTML(ticket.description)}
+                        </p>
+                    </div>
+                </section>
+            `).join("")}
+        </div>
+
+        <p class="ai-draft-note">
+            ${
+                tickets.length === 1
+                    ? "This ticket has not been created yet."
+                    : "These tickets have not been created yet."
+            }
+        </p>
+    `;
+}
+
+
+function renderUpdateDraft(operation) {
+    const renderChange = (
+        label,
+        currentValue,
+        proposedValue
+    ) => {
+        if (proposedValue == null) {
+            return "";
+        }
+
+        return `
+            <div class="ai-draft-change">
+                <strong>${label}</strong>
+
+                <div class="ai-draft-change__field">
+                    <span class="ai-draft-field-label">
+                        Current
+                    </span>
+
+                    <p>
+                        ${escapeHTML(currentValue ?? "—")}
+                    </p>
+                </div>
+
+                <div class="ai-draft-change__field">
+                    <span class="ai-draft-field-label">
+                        Proposed
+                    </span>
+
+                    <p class="ai-draft-proposed">
+                        ${escapeHTML(proposedValue)}
+                    </p>
+                </div>
+            </div>
+        `;
+    };
+
+    return `
+        <div class="ai-draft-ticket-reference">
+            Ticket #${escapeHTML(operation.ticketId)}
+        </div>
+
+        <div class="ai-draft-changes">
+            ${renderChange(
+                "Subject",
+                operation.currentSubject,
+                operation.newSubject
+            )}
+
+            ${renderChange(
+                "Description",
+                operation.currentDescription,
+                operation.newDescription
+            )}
+        </div>
+
+        <p class="ai-draft-note">
+            These changes have not been applied yet.
+        </p>
+    `;
+}
+
+
+/* =========================
+   Pending Draft Card
+========================= */
+
+function renderPendingDraft(
+    container,
+    operation,
+    {
+        onConfirm,
+        onCancel,
+        busy = false,
+    } = {}
+) {
+    container.innerHTML = "";
+
+    if (!operation) {
+        container.classList.add("hidden");
+        return;
+    }
+
+    const isCreation =
+        operation.type === "ticket_creation";
+
+    const isUpdate =
+        operation.type === "ticket_update";
+
+    if (!isCreation && !isUpdate) {
+        container.classList.add("hidden");
+        return;
+    }
+
+    container.classList.remove("hidden");
+
+    const title = isCreation
+        ? "Review proposed tickets"
+        : "Review ticket changes";
+
+    const content = isCreation
+        ? renderCreationDraft(operation)
+        : renderUpdateDraft(operation);
+
+    const expiresAt = operation.expiresAt
+        ? formatDate(operation.expiresAt, true)
+        : null;
+
+    container.innerHTML = `
+        <div class="ai-draft-card">
+            <div class="ai-draft-header">
+                <div>
+                    <span class="ai-draft-eyebrow">
+                        ${
+                            isCreation
+                                ? "AI Ticket Draft"
+                                : "AI Ticket Update"
+                        }
+                    </span>
+
+                    <h3>
+                        ${title}
+                    </h3>
+                </div>
+
+                <span class="ai-draft-badge">
+                    Pending
+                </span>
+            </div>
+
+            ${content}
+
+            ${
+                expiresAt
+                    ? `
+                        <p class="ai-draft-expiry">
+                            Expires: ${escapeHTML(expiresAt)}
+                        </p>
+                    `
+                    : ""
+            }
+
+            <div class="ai-draft-actions">
+                <button
+                    type="button"
+                    class="button button--primary"
+                    data-draft-confirm
+                    ${busy ? "disabled" : ""}
+                >
+                    Confirm
+                </button>
+
+                <button
+                    type="button"
+                    class="button button--secondary"
+                    data-draft-cancel
+                    ${busy ? "disabled" : ""}
+                >
+                    Cancel
+                </button>
+            </div>
+        </div>
+    `;
+
+    container
+        .querySelector("[data-draft-confirm]")
+        .addEventListener("click", () => {
+            onConfirm?.();
+        });
+
+    container
+        .querySelector("[data-draft-cancel]")
+        .addEventListener("click", () => {
+            onCancel?.();
+        });
+}
+
+
+/* =========================
+   Initialize AI Chat
+========================= */
+
 async function initializeAIChat({
     historySelector,
     formSelector,
@@ -123,9 +393,17 @@ async function initializeAIChat({
     greetingSelector = null,
     user,
 }) {
-    const history = document.querySelector(historySelector);
-    const form = document.querySelector(formSelector);
-    const error = document.querySelector(errorSelector);
+    const history = document.querySelector(
+        historySelector
+    );
+
+    const form = document.querySelector(
+        formSelector
+    );
+
+    const error = document.querySelector(
+        errorSelector
+    );
 
     if (!history || !form || !error) {
         return null;
@@ -147,12 +425,22 @@ async function initializeAIChat({
             user.name.split(" ")[0];
     }
 
-    // Build the sidebar for both customer and agent pages.
-    const workspace = document.createElement("div");
-    workspace.className = "ai-chat-workspace";
 
-    const sidebar = document.createElement("aside");
-    sidebar.className = "ai-chat-sidebar";
+    /* =========================
+       Build Workspace
+    ========================= */
+
+    const workspace =
+        document.createElement("div");
+
+    workspace.className =
+        "ai-chat-workspace";
+
+    const sidebar =
+        document.createElement("aside");
+
+    sidebar.className =
+        "ai-chat-sidebar";
 
     sidebar.innerHTML = `
         <div class="ai-chat-sidebar__header">
@@ -177,7 +465,6 @@ async function initializeAIChat({
         ></div>
     `;
 
-    // Preserve the existing chat shell and its contents.
     shell.parentNode.insertBefore(
         workspace,
         shell
@@ -188,26 +475,70 @@ async function initializeAIChat({
         shell
     );
 
+
+    /* =========================
+       Pending Draft Container
+    ========================= */
+
+    const draftContainer =
+        document.createElement("div");
+
+    draftContainer.className =
+        "ai-draft-container hidden";
+
+    // Place the draft above the message composer.
+    const composer =
+        shell.querySelector(".chat-composer");
+
+    if (composer) {
+        shell.insertBefore(
+            draftContainer,
+            composer
+        );
+    } else {
+        history.insertAdjacentElement(
+            "afterend",
+            draftContainer
+        );
+    }
+
+
+    /* =========================
+       Elements and State
+    ========================= */
+
     const chatList = sidebar.querySelector(
         "[data-chat-list]"
     );
 
-    const newChatButton = sidebar.querySelector(
-        "[data-new-chat]"
-    );
+    const newChatButton =
+        sidebar.querySelector(
+            "[data-new-chat]"
+        );
 
-    const submitButton = form.querySelector(
-        'button[type="submit"]'
-    );
+    const submitButton =
+        form.querySelector(
+            'button[type="submit"]'
+        );
 
     let chats = [];
+
     let activeChatId = null;
+
     let messages = [];
 
+    let pendingOperation = null;
+
     let sending = false;
+
     let navigating = false;
 
-    const showError = (message) => {
+
+    /* =========================
+       Error Handling
+    ========================= */
+
+    const showError = message => {
         error.textContent = message;
         error.classList.remove("hidden");
     };
@@ -217,33 +548,137 @@ async function initializeAIChat({
         error.classList.add("hidden");
     };
 
-    const setNavigationBusy = (busy) => {
-        navigating = busy;
-        newChatButton.disabled = busy || sending;
 
-        chatList.querySelectorAll("button").forEach(
-            (button) => {
-                button.disabled = busy || sending;
+    /* =========================
+       Navigation State
+    ========================= */
+
+    const setNavigationBusy = busy => {
+        navigating = busy;
+
+        newChatButton.disabled =
+            busy || sending;
+
+        chatList
+            .querySelectorAll("button")
+            .forEach(button => {
+                button.disabled =
+                    busy || sending;
+            });
+    };
+
+
+    /* =========================
+       Draft State
+    ========================= */
+
+    function renderCurrentDraft() {
+        renderPendingDraft(
+            draftContainer,
+            pendingOperation,
+            {
+                busy: sending || navigating,
+
+                onConfirm: () =>
+                    submitDraftAction("Confirm"),
+
+                onCancel: () =>
+                    submitDraftAction("Cancel"),
             }
         );
-    };
+    }
+
+
+    async function refreshPendingOperation(
+        chatId = activeChatId
+    ) {
+        if (chatId == null) {
+            pendingOperation = null;
+            renderCurrentDraft();
+            return;
+        }
+
+        const result =
+            await getChatPendingOperation(chatId);
+
+        // Ignore responses from a chat that is no
+        // longer selected.
+        if (activeChatId !== chatId) {
+            return;
+        }
+
+        pendingOperation =
+            result.pendingOperation;
+
+        renderCurrentDraft();
+    }
+
+
+    async function submitDraftAction(command) {
+        if (
+            sending ||
+            navigating ||
+            !pendingOperation
+        ) {
+            return;
+        }
+
+        const chatId = activeChatId;
+
+        // Prevent duplicate confirmation requests.
+        sending = true;
+        setNavigationBusy(false);
+        submitButton.disabled = true;
+        renderCurrentDraft();
+
+        sending = false;
+
+        try {
+            // submitMessage manages the sending state,
+            // message history, and draft refresh.
+            await submitMessage(command);
+        } catch (actionError) {
+            showError(
+                actionError.message ||
+                "Unable to process the draft."
+            );
+        }
+
+        // Do not update a different chat if navigation
+        // becomes possible after the request.
+        if (activeChatId === chatId) {
+            renderCurrentDraft();
+        }
+    }
+
+
+    /* =========================
+       Chat List
+    ========================= */
 
     function renderChatList() {
         chatList.innerHTML = "";
 
         if (!chats.length) {
-            const empty = document.createElement("p");
-            empty.className = "ai-chat-list__empty";
-            empty.textContent = "No conversations yet.";
+            const empty =
+                document.createElement("p");
+
+            empty.className =
+                "ai-chat-list__empty";
+
+            empty.textContent =
+                "No conversations yet.";
 
             chatList.append(empty);
             return;
         }
 
-        chats.forEach((chat) => {
-            const item = document.createElement("div");
+        chats.forEach(chat => {
+            const item =
+                document.createElement("div");
 
-            item.className = "ai-chat-list__item";
+            item.className =
+                "ai-chat-list__item";
 
             if (chat.id === activeChatId) {
                 item.classList.add(
@@ -251,32 +686,38 @@ async function initializeAIChat({
                 );
             }
 
-            const openButton = document.createElement(
-                "button"
-            );
+            const openButton =
+                document.createElement("button");
 
             openButton.type = "button";
-            openButton.className = "ai-chat-list__open";
-            openButton.textContent = chat.title;
-            openButton.title = chat.title;
+
+            openButton.className =
+                "ai-chat-list__open";
+
+            openButton.textContent =
+                chat.title;
+
+            openButton.title =
+                chat.title;
 
             openButton.addEventListener(
                 "click",
-                () => {
-                    openChat(chat.id);
-                }
+                () => openChat(chat.id)
             );
 
-            const renameButton = document.createElement(
-                "button"
-            );
+            const renameButton =
+                document.createElement("button");
 
             renameButton.type = "button";
+
             renameButton.className =
                 "ai-chat-list__action";
 
             renameButton.textContent = "✎";
-            renameButton.title = "Rename chat";
+
+            renameButton.title =
+                "Rename chat";
+
             renameButton.setAttribute(
                 "aria-label",
                 `Rename ${chat.title}`
@@ -287,16 +728,19 @@ async function initializeAIChat({
                 () => renameExistingChat(chat)
             );
 
-            const deleteButton = document.createElement(
-                "button"
-            );
+            const deleteButton =
+                document.createElement("button");
 
             deleteButton.type = "button";
+
             deleteButton.className =
                 "ai-chat-list__action ai-chat-list__delete";
 
             deleteButton.textContent = "×";
-            deleteButton.title = "Delete chat";
+
+            deleteButton.title =
+                "Delete chat";
+
             deleteButton.setAttribute(
                 "aria-label",
                 `Delete ${chat.title}`
@@ -319,10 +763,16 @@ async function initializeAIChat({
         setNavigationBusy(navigating);
     }
 
+
     async function refreshChats() {
         chats = await getChats();
         renderChatList();
     }
+
+
+    /* =========================
+       Open Chat
+    ========================= */
 
     async function openChat(chatId) {
         if (sending || navigating) {
@@ -332,6 +782,9 @@ async function initializeAIChat({
         setNavigationBusy(true);
         clearError();
 
+        pendingOperation = null;
+        renderCurrentDraft();
+
         renderState(
             history,
             "loading",
@@ -339,11 +792,20 @@ async function initializeAIChat({
         );
 
         try {
-            const loadedMessages =
-                await getChatMessages(chatId);
+            const [
+                loadedMessages,
+                draftResult,
+            ] = await Promise.all([
+                getChatMessages(chatId),
+                getChatPendingOperation(chatId),
+            ]);
 
             activeChatId = chatId;
+
             messages = loadedMessages;
+
+            pendingOperation =
+                draftResult.pendingOperation;
 
             renderChat(history, messages);
         } catch (loadError) {
@@ -360,8 +822,14 @@ async function initializeAIChat({
         } finally {
             setNavigationBusy(false);
             renderChatList();
+            renderCurrentDraft();
         }
     }
+
+
+    /* =========================
+       Create Chat
+    ========================= */
 
     async function startNewChat() {
         if (sending || navigating) {
@@ -377,9 +845,13 @@ async function initializeAIChat({
             chats.unshift(chat);
 
             activeChatId = chat.id;
+
             messages = [];
 
+            pendingOperation = null;
+
             renderChat(history, messages);
+            renderCurrentDraft();
         } catch (createError) {
             showError(
                 createError.message ||
@@ -390,6 +862,11 @@ async function initializeAIChat({
             renderChatList();
         }
     }
+
+
+    /* =========================
+       Rename Chat
+    ========================= */
 
     async function renameExistingChat(chat) {
         if (sending || navigating) {
@@ -405,10 +882,13 @@ async function initializeAIChat({
             return;
         }
 
-        const trimmedTitle = title.trim();
+        const trimmedTitle =
+            title.trim();
 
         if (!trimmedTitle) {
-            showError("Chat name cannot be empty.");
+            showError(
+                "Chat name cannot be empty."
+            );
             return;
         }
 
@@ -434,6 +914,11 @@ async function initializeAIChat({
         }
     }
 
+
+    /* =========================
+       Delete Chat
+    ========================= */
+
     async function deleteExistingChat(chat) {
         if (sending || navigating) {
             return;
@@ -454,32 +939,51 @@ async function initializeAIChat({
             await deleteChat(chat.id);
 
             chats = chats.filter(
-                (item) => item.id !== chat.id
+                item => item.id !== chat.id
             );
 
             if (activeChatId === chat.id) {
                 activeChatId = null;
+
                 messages = [];
 
+                pendingOperation = null;
+
                 renderChat(history, messages);
+                renderCurrentDraft();
             }
 
-            renderChatList();
-
-            // Keep an existing chat selected if possible.
             if (
                 activeChatId === null &&
                 chats.length
             ) {
                 const nextChat = chats[0];
 
-                const loadedMessages =
-                    await getChatMessages(nextChat.id);
+                const [
+                    loadedMessages,
+                    draftResult,
+                ] = await Promise.all([
+                    getChatMessages(nextChat.id),
+                    getChatPendingOperation(
+                        nextChat.id
+                    ),
+                ]);
 
-                activeChatId = nextChat.id;
-                messages = loadedMessages;
+                activeChatId =
+                    nextChat.id;
 
-                renderChat(history, messages);
+                messages =
+                    loadedMessages;
+
+                pendingOperation =
+                    draftResult.pendingOperation;
+
+                renderChat(
+                    history,
+                    messages
+                );
+
+                renderCurrentDraft();
             }
         } catch (deleteError) {
             showError(
@@ -489,11 +993,18 @@ async function initializeAIChat({
         } finally {
             setNavigationBusy(false);
             renderChatList();
+            renderCurrentDraft();
         }
     }
 
+
+    /* =========================
+       Send Message
+    ========================= */
+
     async function submitMessage(message) {
-        const value = String(message || "").trim();
+        const value =
+            String(message || "").trim();
 
         if (!value) {
             throw new Error(
@@ -507,7 +1018,6 @@ async function initializeAIChat({
             );
         }
 
-        // Create a chat automatically if none is selected.
         if (activeChatId === null) {
             await startNewChat();
 
@@ -519,11 +1029,18 @@ async function initializeAIChat({
         }
 
         sending = true;
+
         setNavigationBusy(false);
+
         submitButton.disabled = true;
 
-        const chatId = activeChatId;
-        const optimisticId = `local-${Date.now()}`;
+        renderCurrentDraft();
+
+        const chatId =
+            activeChatId;
+
+        const optimisticId =
+            `local-${Date.now()}`;
 
         clearError();
 
@@ -531,46 +1048,99 @@ async function initializeAIChat({
             id: optimisticId,
             role: "user",
             message: value,
-            timestamp: new Date().toISOString(),
+            timestamp:
+                new Date().toISOString(),
         });
 
-        renderChat(history, messages);
+        renderChat(
+            history,
+            messages
+        );
 
-        const typing = appendTyping(history);
+        const typing =
+            appendTyping(history);
 
         try {
-            const reply = await sendChatMessage(
-                chatId,
-                value
-            );
+            const reply =
+                await sendChatMessage(
+                    chatId,
+                    value
+                );
 
             typing.remove();
 
-            // Reload persisted messages to get real IDs and dates.
-            messages = await getChatMessages(chatId);
+            // Reload persisted messages and the
+            // current pending operation.
+            const [
+                loadedMessages,
+                draftResult,
+            ] = await Promise.all([
+                getChatMessages(chatId),
+                getChatPendingOperation(
+                    chatId
+                ),
+            ]);
 
-            renderChat(history, messages);
+            messages =
+                loadedMessages;
 
-            await refreshChats();
+            pendingOperation =
+                draftResult.pendingOperation;
+
+            renderChat(
+                history,
+                messages
+            );
+
+            renderCurrentDraft();
+
+            try {
+                await refreshChats();
+            } catch (refreshError) {
+                console.error(
+                    "Unable to refresh chats:",
+                    refreshError
+                );
+            }
 
             return reply;
         } catch (sendError) {
             typing.remove();
 
-            // A request may have succeeded even if its
-            // response was lost. Reload before retrying.
+            // Reload persisted state because the
+            // request may have completed on the server.
             try {
-                messages = await getChatMessages(
-                    chatId
-                );
+                const [
+                    loadedMessages,
+                    draftResult,
+                ] = await Promise.all([
+                    getChatMessages(chatId),
+                    getChatPendingOperation(
+                        chatId
+                    ),
+                ]);
+
+                messages =
+                    loadedMessages;
+
+                pendingOperation =
+                    draftResult.pendingOperation;
             } catch {
                 messages = messages.filter(
-                    (item) =>
+                    item =>
                         item.id !== optimisticId
                 );
+
+                // Do not show potentially stale actions.
+                pendingOperation = null;
             }
 
-            renderChat(history, messages);
+            renderChat(
+                history,
+                messages
+            );
+
+            renderCurrentDraft();
 
             showError(
                 sendError.message ||
@@ -580,11 +1150,20 @@ async function initializeAIChat({
             throw sendError;
         } finally {
             sending = false;
+
             submitButton.disabled = false;
+
             setNavigationBusy(false);
+
             renderChatList();
+            renderCurrentDraft();
         }
     }
+
+
+    /* =========================
+       Event Listeners
+    ========================= */
 
     newChatButton.addEventListener(
         "click",
@@ -593,11 +1172,14 @@ async function initializeAIChat({
 
     form.addEventListener(
         "submit",
-        async (event) => {
+        async event => {
             event.preventDefault();
 
-            const input = form.elements.message;
-            const value = input.value;
+            const input =
+                form.elements.message;
+
+            const value =
+                input.value;
 
             if (!value.trim()) {
                 showError(
@@ -623,12 +1205,12 @@ async function initializeAIChat({
             try {
                 await submitMessage(value);
             } catch {
-                // Restore text only if it was not saved.
-                const wasSaved = messages.some(
-                    (item) =>
-                        item.role === "user" &&
-                        item.message === value
-                );
+                const wasSaved =
+                    messages.some(
+                        item =>
+                            item.role === "user" &&
+                            item.message === value
+                    );
 
                 if (!wasSaved) {
                     input.value = value;
@@ -645,7 +1227,11 @@ async function initializeAIChat({
         }
     );
 
-    // Load previous chats on page initialization.
+
+    /* =========================
+       Initial Load
+    ========================= */
+
     renderState(
         history,
         "loading",
@@ -656,9 +1242,12 @@ async function initializeAIChat({
         await refreshChats();
 
         if (chats.length) {
-            await openChat(chats[0].id);
+            await openChat(
+                chats[0].id
+            );
         } else {
             renderChat(history, []);
+            renderCurrentDraft();
         }
     } catch (loadError) {
         renderState(
@@ -675,22 +1264,38 @@ async function initializeAIChat({
 }
 
 
+/* =========================
+   Customer Chat
+========================= */
+
 export async function initChatbot(user) {
-    const submitMessage = await initializeAIChat({
-        historySelector: "#chat-history",
-        formSelector: "#chat-form",
-        errorSelector: "#chat-error",
-        greetingSelector: "[data-chat-customer]",
-        user,
-    });
+    const submitMessage =
+        await initializeAIChat({
+            historySelector:
+                "#chat-history",
+
+            formSelector:
+                "#chat-form",
+
+            errorSelector:
+                "#chat-error",
+
+            greetingSelector:
+                "[data-chat-customer]",
+
+            user,
+        });
 
     if (!submitMessage) {
         return;
     }
 
     registerPageTool({
-        name: "send_support_chat_message",
-        title: "Message AI support",
+        name:
+            "send_support_chat_message",
+
+        title:
+            "Message AI support",
 
         description:
             "Send one customer message to the AI support assistant and return its response.",
@@ -706,6 +1311,7 @@ export async function initChatbot(user) {
             },
 
             required: ["message"],
+
             additionalProperties: false,
         },
 
@@ -715,9 +1321,10 @@ export async function initChatbot(user) {
         },
 
         async execute(input) {
-            const reply = await submitMessage(
-                input.message
-            );
+            const reply =
+                await submitMessage(
+                    input.message
+                );
 
             return {
                 response: reply.message,
@@ -727,21 +1334,33 @@ export async function initChatbot(user) {
 }
 
 
+/* =========================
+   Agent Chat
+========================= */
+
 export async function initAgentAIChat(user) {
-    const submitMessage = await initializeAIChat({
-        historySelector: "#agent-chat-history",
-        formSelector: "#agent-chat-form",
-        errorSelector: "#agent-chat-error",
-        user,
-    });
+    const submitMessage =
+        await initializeAIChat({
+            historySelector:
+                "#agent-chat-history",
+
+            formSelector:
+                "#agent-chat-form",
+
+            errorSelector:
+                "#agent-chat-error",
+
+            user,
+        });
 
     if (!submitMessage) {
         return;
     }
 
-    const createButton = document.querySelector(
-        "#start-customer-ticket"
-    );
+    const createButton =
+        document.querySelector(
+            "#start-customer-ticket"
+        );
 
     createButton?.addEventListener(
         "click",

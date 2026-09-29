@@ -536,6 +536,94 @@ export const getChatMessages = async (
     ).map(normalizeChatMessage);
 
 
+
+
+
+/* =========================
+   Chat Pending Operation
+========================= */
+
+const normalizePendingOperation = (operation) => {
+    if (!operation) {
+        return null;
+    }
+
+    const base = {
+        type: operation.type,
+        status: operation.status,
+
+        expiresAt:
+            operation.expires_at ??
+            operation.expiresAt,
+    };
+
+    if (operation.type === "ticket_creation") {
+        return {
+            ...base,
+
+            customer: operation.customer,
+
+            tickets: (operation.tickets || []).map(
+                ticket => ({
+                    subject: ticket.subject,
+                    description: ticket.description,
+                })
+            ),
+        };
+    }
+
+    if (operation.type === "ticket_update") {
+        return {
+            ...base,
+
+            ticketId:
+                operation.ticket_id ??
+                operation.ticketId,
+
+            currentSubject:
+                operation.current_subject ??
+                operation.currentSubject,
+
+            currentDescription:
+                operation.current_description ??
+                operation.currentDescription,
+
+            newSubject:
+                operation.new_subject ??
+                operation.newSubject,
+
+            newDescription:
+                operation.new_description ??
+                operation.newDescription,
+        };
+    }
+
+    return null;
+};
+
+
+// Get the current pending operation for one chat.
+export const getChatPendingOperation = async (
+    chatId
+) => {
+    const response = await apiRequest(
+        `/ai/chats/${encodeURIComponent(chatId)}/pending-operation`
+    );
+
+    return {
+        chatId:
+            response.chat_id ??
+            response.chatId,
+
+        pendingOperation:
+            normalizePendingOperation(
+                response.pending_operation ??
+                response.pendingOperation
+            ),
+    };
+};
+
+
 // Send a message to a specific chat.
 export const sendChatMessage = async (
     chatId,

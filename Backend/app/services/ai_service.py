@@ -1005,3 +1005,126 @@ class AIService:
         return AIClassificationResponse.model_validate(
             existing
         )
+
+
+    
+    @staticmethod
+    def get_pending_operation(
+        db: Session,
+        user_id: int,
+        chat_id: int,
+    ) -> dict:
+        AIService._get_user_chat(
+            db=db,
+            user_id=user_id,
+            chat_id=chat_id,
+        )
+
+        creation_draft = db.get(
+            PendingTicketDraft,
+            (user_id, chat_id),
+        )
+
+        update_draft = db.get(
+            PendingTicketUpdate,
+            (user_id, chat_id),
+        )
+
+        # Remove expired drafts from the selected chat.
+        expired = False
+
+        for draft in (creation_draft, update_draft):
+            if (
+                draft is not None
+                and AIService._draft_expired(draft)
+            ):
+                db.delete(draft)
+                expired = True
+
+                if draft is creation_draft:
+                    creation_draft = None
+                else:
+                    update_draft = None
+
+        if expired:
+            db.commit()
+
+        if creation_draft is not None:
+            customer = None
+
+            if creation_draft.customer_id is not None:
+                user = db.get(
+                    User,
+                    creation_draft.customer_id,
+                )
+
+                if user is not None:
+                    customer = {
+                        "id": user.id,
+                        "name": user.name,
+                        "email": user.email,
+                    }
+
+            created_at = creation_draft.created_at
+
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(
+                    tzinfo=timezone.utc
+                )
+
+            return {
+                "chat_id": chat_id,
+                "pending_operation": {
+                    "type": "ticket_creation",
+                    "status": "pending",
+                    "expires_at": (
+                        created_at + DRAFT_EXPIRY
+                    ).isoformat(),
+                    "customer": customer,
+                    "tickets": creation_draft.tickets,
+                },
+            }
+
+        if update_draft is not None:
+            ticket = db.get(
+                Ticket,
+                update_draft.ticket_id,
+            )
+
+            created_at = update_draft.created_at
+
+            if created_at.tzinfo is None:
+                created_at = created_at.replace(
+                    tzinfo=timezone.utc
+                )
+
+            return {
+                "chat_id": chat_id,
+                "pending_operation": {
+                    "type": "ticket_update",
+                    "status": "pending",
+                    "expires_at": (
+                        created_at + DRAFT_EXPIRY
+                    ).isoformat(),
+                    "ticket_id": update_draft.ticket_id,
+                    "current_subject": (
+                        ticket.subject
+                        if ticket is not None
+                        else None
+                    ),
+                    "current_description": (
+                        ticket.description
+                        if ticket is not None
+                        else None
+                    ),
+                    "new_subject": update_draft.subject,
+                    "new_description": (
+                        update_draft.description
+                    ),
+                },
+            }
+
+        return {
+            "chat_id": chat_id,
+            "pending_operation": None,
+        }
