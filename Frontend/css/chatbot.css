@@ -228,3 +228,143 @@
         width: 100%;
     }
 }
+
+
+/* =========================
+   Multiple Chats Workspace
+========================= */
+
+.ai-chat-workspace {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    gap: 20px;
+    width: 100%;
+    min-height: 650px;
+}
+
+.ai-chat-workspace > .chat-shell {
+    min-width: 0;
+}
+
+.ai-chat-sidebar {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    padding: 20px 12px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+}
+
+.ai-chat-sidebar__header {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 0 8px;
+}
+
+.ai-chat-sidebar__header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.ai-new-chat {
+    width: 100%;
+}
+
+.ai-chat-sidebar__label {
+    margin: 28px 8px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.ai-chat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+    max-height: 520px;
+}
+
+.ai-chat-list__item {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    border-radius: 10px;
+    padding: 4px;
+}
+
+.ai-chat-list__item:hover {
+    background: #f8fafc;
+}
+
+.ai-chat-list__item--active {
+    background: #eff6ff;
+}
+
+.ai-chat-list__open {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 8px;
+    background: transparent;
+    border: 0;
+    color: #334155;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+.ai-chat-list__item--active
+.ai-chat-list__open {
+    color: #1d4ed8;
+    font-weight: 600;
+}
+
+.ai-chat-list__action {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.ai-chat-list__action:hover {
+    background: #e2e8f0;
+}
+
+.ai-chat-list__delete:hover {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.ai-chat-list__empty {
+    padding: 12px;
+    color: #64748b;
+    font-size: 13px;
+}
+
+@media (max-width: 768px) {
+    .ai-chat-workspace {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+    }
+
+    .ai-chat-sidebar {
+        padding: 14px;
+    }
+
+    .ai-chat-list {
+        max-height: 180px;
+    }
+}

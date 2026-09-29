@@ -57,7 +57,6 @@ def _require_active_customer(
     db: Session,
     customer_id: int,
 ) -> User:
-    # Lock the customer to serialize ticket creation.
     customer = (
         db.query(User)
         .filter(User.id == customer_id)
@@ -286,7 +285,6 @@ def create_ticket(
         _require_active_customer(db, user_id)
         _check_daily_allowance(db, user_id, 1)
 
-        # Customer-created tickets remain unassigned.
         ticket = _new_ticket(
             db,
             user_id,
@@ -354,22 +352,23 @@ def create_ticket_on_behalf(
 def confirm_ticket_draft(
     db: Session,
     user_id: int,
+    chat_id: int,
     user_role: UserRole,
     is_expired,
 ) -> list[dict]:
     """
-    Lock and confirm the entire draft atomically.
+    Lock and confirm the draft belonging to this chat.
 
     Either all proposed tickets are created,
     or none are created.
-
-    Agent-created tickets are automatically assigned
-    to the agent who confirmed the draft.
     """
     try:
         draft = (
             db.query(PendingTicketDraft)
-            .filter(PendingTicketDraft.user_id == user_id)
+            .filter(
+                PendingTicketDraft.user_id == user_id,
+                PendingTicketDraft.chat_id == chat_id,
+            )
             .with_for_update()
             .first()
         )
@@ -383,7 +382,6 @@ def confirm_ticket_draft(
         if is_expired(draft):
             db.delete(draft)
             db.commit()
-
             return []
 
         if draft.customer_id is None:
@@ -699,6 +697,7 @@ def delete_ticket(
 def confirm_customer_ticket_update(
     db: Session,
     user_id: int,
+    chat_id: int,
     user_role: UserRole,
     is_expired,
 ) -> Ticket:
@@ -711,7 +710,10 @@ def confirm_customer_ticket_update(
     try:
         draft = (
             db.query(PendingTicketUpdate)
-            .filter(PendingTicketUpdate.user_id == user_id)
+            .filter(
+                PendingTicketUpdate.user_id == user_id,
+                PendingTicketUpdate.chat_id == chat_id,
+            )
             .with_for_update()
             .first()
         )

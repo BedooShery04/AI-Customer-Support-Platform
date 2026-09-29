@@ -25,6 +25,13 @@ class AIChatMessage(Base):
         nullable=False
     )
 
+    chat_id: Mapped[int] = mapped_column(
+    Integer,
+    ForeignKey("ai_chats.id", ondelete="CASCADE"),
+    nullable=False,
+    index=True,
+)
+
     role: Mapped[str] = mapped_column(
         Text,
         nullable=False
@@ -45,3 +52,8 @@ class AIChatMessage(Base):
         "User",
         back_populates="ai_chat_messages"
     )
+
+    chat = relationship(
+    "AIChat",
+    back_populates="messages",
+)

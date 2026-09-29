@@ -421,11 +421,124 @@ export const sendTicketMessage = async (
     );
 
 
+
 /* =========================
    AI Chat
 ========================= */
 
+const normalizeChat = (chat) => ({
+    ...chat,
+
+    createdAt:
+        chat.created_at ??
+        chat.createdAt,
+
+    updatedAt:
+        chat.updated_at ??
+        chat.updatedAt,
+});
+
+const normalizeChatMessage = (message) => ({
+    ...message,
+
+    role:
+        message.role === "assistant"
+            ? "ai"
+            : message.role,
+
+    timestamp:
+        message.created_at ??
+        message.timestamp,
+});
+
+
+/* =========================
+   Chat Management
+========================= */
+
+// Create a new chat.
+export const createChat = async (
+    title = "New Chat"
+) =>
+    normalizeChat(
+        await apiRequest(
+            "/ai/chats",
+            {
+                method: "POST",
+                body: {
+                    title,
+                },
+            }
+        )
+    );
+
+
+// Get all chats belonging to the current user.
+export const getChats = async () =>
+    (
+        await apiRequest("/ai/chats")
+    ).map(normalizeChat);
+
+
+// Get details of a specific chat.
+export const getChatById = async (
+    chatId
+) =>
+    normalizeChat(
+        await apiRequest(
+            `/ai/chats/${encodeURIComponent(chatId)}`
+        )
+    );
+
+
+// Rename an existing chat.
+export const renameChat = async (
+    chatId,
+    title
+) =>
+    normalizeChat(
+        await apiRequest(
+            `/ai/chats/${encodeURIComponent(chatId)}`,
+            {
+                method: "PATCH",
+                body: {
+                    title,
+                },
+            }
+        )
+    );
+
+
+// Delete a chat and its messages.
+export const deleteChat = (
+    chatId
+) =>
+    apiRequest(
+        `/ai/chats/${encodeURIComponent(chatId)}`,
+        {
+            method: "DELETE",
+        }
+    );
+
+
+/* =========================
+   Chat Messages
+========================= */
+
+// Get messages belonging to one chat.
+export const getChatMessages = async (
+    chatId
+) =>
+    (
+        await apiRequest(
+            `/ai/chats/${encodeURIComponent(chatId)}/messages`
+        )
+    ).map(normalizeChatMessage);
+
+
+// Send a message to a specific chat.
 export const sendChatMessage = async (
+    chatId,
     message
 ) => {
     const response = await apiRequest(
@@ -433,6 +546,7 @@ export const sendChatMessage = async (
         {
             method: "POST",
             body: {
+                chat_id: chatId,
                 message,
             },
         }
@@ -446,8 +560,10 @@ export const sendChatMessage = async (
     };
 };
 
-export const getChatMessages = () =>
-    apiRequest("/ai/chat/messages");
+
+/* =========================
+   AI Response Suggestion
+========================= */
 
 export const generateAIResponseSuggestion = (
     id

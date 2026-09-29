@@ -6,3 +6,5 @@ from app.models.audit_log import AuditLog
 from app.models.ai_chat_message import AIChatMessage
 from app.models.pending_ticket_draft import PendingTicketDraft
 from app.models.pending_ticket_update import PendingTicketUpdate
+from app.models.ai_chat import AIChat
+from app.models.ai_chat_message import AIChatMessage

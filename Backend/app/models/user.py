@@ -83,6 +83,12 @@ class User(Base):
     cascade="all, delete-orphan"
     )
 
+    ai_chats = relationship(
+    "AIChat",
+    back_populates="user",
+    cascade="all, delete-orphan",
+)
+
     # Admin -> Audit Logs
     audit_logs = relationship(
         "AuditLog",
