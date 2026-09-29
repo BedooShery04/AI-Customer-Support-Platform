@@ -371,6 +371,164 @@ Frontend/
 * **Pydantic**
 * **Pydantic Settings**
 
+## ⚙️ n8n Workflow Automation
+
+The platform is integrated with **n8n Cloud** to automate notifications, ticket escalation, reporting, and customer follow-up workflows.
+
+### Workflow 1 — New Ticket Notification
+
+**Purpose:** Automatically notify the relevant support team when a new ticket is created.
+
+**Flow:**
+
+```text
+PostgreSQL Trigger
+        ↓
+Detect New Ticket
+        ↓
+Retrieve Ticket Information
+        ↓
+Send Email Notification
+```
+
+**Functionality:**
+
+* Monitors the PostgreSQL database for newly created tickets.
+* Retrieves the ticket information.
+* Sends an automated email notification to the relevant support party.
+
+---
+
+### Workflow 2 — Ticket Escalation
+
+**Purpose:** Automatically notify the relevant party when a ticket is escalated.
+
+**Flow:**
+
+```text
+PostgreSQL Trigger
+        ↓
+Detect Escalated Ticket
+        ↓
+Retrieve Ticket Information
+        ↓
+Send Email Notification
+```
+
+**Functionality:**
+
+* Detects ticket escalation events through PostgreSQL.
+* Retrieves the escalated ticket details.
+* Sends an automated email notification to the relevant party.
+
+---
+
+### Workflow 3 — Google Sheets Reporting
+
+**Purpose:** Automatically generate and export support-platform reporting data.
+
+**Flow:**
+
+```text
+Schedule Trigger
+        ↓
+Execute PostgreSQL Query
+        ↓
+Retrieve Reporting Data
+        ↓
+Append Data to Google Sheets
+```
+
+**Functionality:**
+
+* Runs automatically according to a configured schedule.
+* Executes SQL queries against PostgreSQL.
+* Retrieves support and ticket reporting data.
+* Appends the results to a Google Sheet for reporting and analysis.
+
+**n8n Workflow:**
+https://hodaagiba.app.n8n.cloud/workflow/nfLOkDAvnda9Zoqe
+
+---
+
+### Workflow 4 — Resolved Ticket Follow-up
+
+**Purpose:** Automatically follow up with customers after their tickets have been resolved.
+
+**Flow:**
+
+```text
+Schedule Trigger
+        ↓
+Query Tickets Requiring Follow-up
+        ↓
+Read / Update ticket_followups
+        ↓
+Wait
+        ↓
+Query Ticket Status
+        ↓
+IF Condition
+     ↙       ↘
+Resolved    Not Resolved
+   ↓
+Send Gmail
+   ↓
+Insert Follow-up Record
+```
+
+**Functionality:**
+
+* Runs on a scheduled basis.
+* Identifies tickets that require customer follow-up.
+* Uses the `ticket_followups` records to manage follow-up state.
+* Waits for the configured follow-up period.
+* Checks the ticket status again.
+* If the required condition is satisfied, an automated Gmail message is sent to the customer.
+* Records the follow-up operation in the database.
+
+**n8n Workflow:**
+https://hodaagiba.app.n8n.cloud/workflow/crcisTVMDaLl5qli
+
+---
+
+### n8n Automation Architecture
+
+```text
+                    ┌─────────────────────┐
+                    │   Support Platform  │
+                    │      PostgreSQL     │
+                    └──────────┬──────────┘
+                               │
+                  ┌────────────┴────────────┐
+                  │                         │
+          PostgreSQL Trigger          Scheduled Trigger
+                  │                         │
+                  ▼                         ▼
+          ┌───────────────┐        ┌─────────────────┐
+          │     n8n       │        │      n8n        │
+          │  Automation   │        │   Automation    │
+          └───────┬───────┘        └────────┬────────┘
+                  │                         │
+          ┌───────┴────────┐       ┌────────┴─────────┐
+          ▼                ▼       ▼                  ▼
+       Gmail          Notifications       Google Sheets
+                                             / Gmail
+```
+
+### Automated Operations
+
+| Workflow                | Trigger            | Integration                | Purpose                                       |
+| ----------------------- | ------------------ | -------------------------- | --------------------------------------------- |
+| New Ticket Notification | PostgreSQL Trigger | Gmail                      | Notify support team about new tickets         |
+| Ticket Escalation       | PostgreSQL Trigger | Gmail                      | Notify relevant party about escalated tickets |
+| Google Sheets Reporting | Schedule Trigger   | PostgreSQL + Google Sheets | Automated reporting/export                    |
+| Ticket Follow-up        | Schedule Trigger   | PostgreSQL + Gmail         | Follow up with customers after resolution     |
+
+These workflows extend the platform beyond the core FastAPI application by providing **event-driven and scheduled automation** through n8n Cloud.
+
+
+
 ### Authentication & Security
 
 * **JWT**
@@ -982,7 +1140,8 @@ Potential improvements include:
 | ----------- | ------ |
 | **Abdurrahman Sherif** | [@BedooShery04](https://github.com/BedooShery04) |
 | **Hoda Mahmoud** | [@HodaMahmoud111](https://github.com/HodaMahmoud111) |
-| **Abdurrahman Antar** | [@abdoantaaaar](https://github.com/abdoantaaaar)
+| **Abdurrahman Antar** | [@abdoantaaaar](https://github.com/abdoantaaaar) |
+| **Ahmed Osama** | [@](https://github.com/) |
 ---
 
 ## 📄 License
