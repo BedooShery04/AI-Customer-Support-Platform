@@ -318,6 +318,41 @@
     margin-top: 4px;
 }
 
+.ai-classification-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.ai-classification-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.ai-classification-status--pending {
+    background: #fff7ed;
+    color: #c2410c;
+}
+
+.ai-classification-status--completed {
+    background: #ecfdf5;
+    color: #047857;
+}
+
+.ai-classification-status--failed {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
 /* Ticket Modal */
 
 .ticket-modal-summary {

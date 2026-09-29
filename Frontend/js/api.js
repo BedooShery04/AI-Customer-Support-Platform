@@ -14,7 +14,7 @@ export function normalizeUser(user) {
 }
 
 export function normalizeTicket(ticket) {
-    const value = {
+    return {
         ...ticket,
 
         customerId:
@@ -22,13 +22,11 @@ export function normalizeTicket(ticket) {
             ticket.customerId,
 
         customer:
-            ticket.customer ??
-            null,
+            ticket.customer,
 
         assignedAgentId:
             ticket.assigned_agent_id ??
-            ticket.assignedAgentId ??
-            null,
+            ticket.assignedAgentId,
 
         createdAt:
             ticket.created_at ??
@@ -38,23 +36,28 @@ export function normalizeTicket(ticket) {
             ticket.updated_at ??
             ticket.updatedAt,
 
+        classificationStatus:
+            ticket.classification_status ??
+            ticket.classificationStatus ??
+            "pending",
+
         aiClassification:
             ticket.ai_classification
                 ? {
-                    summary: ticket.ai_classification.summary,
+                    summary:
+                        ticket.ai_classification.summary,
+
                     suggestedAction:
                         ticket.ai_classification.suggested_action,
+
                     category:
                         ticket.ai_classification.category,
+
                     priority:
                         ticket.ai_classification.priority,
                 }
                 : ticket.aiClassification ?? null,
     };
-
-    ticketCache.set(value.id, value);
-
-    return value;
 }
 
 const normalizeMessage = (item) => ({

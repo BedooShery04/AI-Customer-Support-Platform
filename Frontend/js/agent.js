@@ -428,6 +428,7 @@ function bindAISuggestion(ticketId, conversation) {
 function bindAIClassification(
     ticketId,
     existingClassification = null,
+    existingStatus = "pending"
 ) {
     const classify = document.querySelector(
         "#classify-ticket",
@@ -464,7 +465,33 @@ function bindAIClassification(
     const action = document.querySelector(
         "#ai-classification-action",
     );
+    const statusBadge = document.querySelector(
+    "#ai-classification-status"
+);
 
+    const renderStatus = (status) => {
+    if (!statusBadge) {
+        return;
+    }
+
+    const normalizedStatus =
+        String(status || "pending").toLowerCase();
+
+    statusBadge.textContent =
+        normalizedStatus === "completed"
+            ? "Completed"
+            : normalizedStatus === "failed"
+                ? "Failed"
+                : "Pending";
+
+    statusBadge.className =
+        "ai-classification-status";
+
+    statusBadge.classList.add(
+        `ai-classification-status--${normalizedStatus}`
+    );
+};
+    renderStatus(existingStatus);
     if (!classify) {
         return;
     }
@@ -489,6 +516,7 @@ function bindAIClassification(
     };
 
     const runClassification = async (button) => {
+        renderStatus("pending");
         error.classList.add("hidden");
 
         setButtonBusy(button, true, "Analyzing…");
@@ -497,12 +525,14 @@ function bindAIClassification(
             const result = await classifyTicket(ticketId);
 
             renderClassification(result);
+            renderStatus("completed");
 
             showToast(
                 "Ticket classified successfully.",
             );
 
         } catch (requestError) {
+            renderStatus("failed");
             error.textContent =
                 requestError.message ||
                 "Unable to classify the ticket.";
@@ -732,6 +762,7 @@ export async function initAgentTicketDetails(user) {
             ticketId,
             ticket.aiClassification ??
             ticket.ai_classification,
+            ticket.classificationStatus,
         );
 
     } catch (error) {
