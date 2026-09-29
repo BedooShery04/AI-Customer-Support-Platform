@@ -175,26 +175,6 @@
     margin-top: 40px;
 }
 
-.preview-card {
-    min-height: 118px;
-    padding: 17px;
-    border: 1px solid rgba(255, 255, 255, 0.13);
-    border-radius: 14px;
-    background: rgba(255, 255, 255, 0.09);
-    backdrop-filter: blur(8px);
-}
-
-.preview-card span {
-    color: rgba(255, 255, 255, 0.65);
-    font-size: 0.72rem;
-}
-
-.preview-card strong {
-    display: block;
-    margin-top: 7px;
-    font-size: 1.8rem;
-}
-
 .preview-lines {
     display: grid;
     gap: 8px;
