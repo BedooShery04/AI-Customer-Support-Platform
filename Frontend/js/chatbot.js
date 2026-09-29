@@ -261,10 +261,35 @@ export async function initChatbot(user) {
 }
 
 export async function initAgentAIChat(user) {
-    await initializeAIChat({
+    const submitMessage = await initializeAIChat({
         historySelector: "#agent-chat-history",
         formSelector: "#agent-chat-form",
         errorSelector: "#agent-chat-error",
         user,
+    });
+
+    if (!submitMessage) return;
+
+    const createButton = document.querySelector(
+        "#start-customer-ticket"
+    );
+
+    createButton?.addEventListener("click", async () => {
+        createButton.disabled = true;
+
+        try {
+            await submitMessage(
+                "I want to create a support ticket on behalf " +
+                "of a customer. Please ask me for the customer's " +
+                "email address and help me prepare a ticket draft."
+            );
+        } catch (error) {
+            console.error(
+                "Unable to start ticket creation:",
+                error
+            );
+        } finally {
+            createButton.disabled = false;
+        }
     });
 }

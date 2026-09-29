@@ -16,45 +16,72 @@
         <link rel="stylesheet" href="../css/chatbot.css" />
     </head>
 
-    <body data-page="agent-ai-assistant" data-role="agent" data-nav="ai-assistant" data-title="AI Assistant"
-        data-eyebrow="Support workspace">
-        <main id="page-content" class="main-content">
+    <body
+    data-page="agent-ai-assistant"
+    data-role="agent"
+    data-nav="ai-assistant"
+    data-title="AI Assistant"
+    data-eyebrow="Support workspace"
+>
+    <main id="page-content" class="main-content">
 
-            <div class="chat-page">
-                <section class="chat-shell">
+        <div class="chat-page">
+            <section class="chat-shell">
 
-                    <header class="chat-header">
-                        <div class="chat-avatar" aria-hidden="true">
-                            <span></span>
-                            <span></span>
-                        </div>
+                <header class="chat-header">
+                    <div class="chat-avatar" aria-hidden="true">
+                        <span></span>
+                        <span></span>
+                    </div>
 
-                        <div>
-                            <h2>AI Assistant</h2>
-                            <p>Available to help with support tasks</p>
-                        </div>
-                    </header>
+                    <div>
+                        <h2>AI Assistant</h2>
+                        <p>Available to help with support tasks</p>
+                    </div>
+                </header>
 
-                    <div id="agent-chat-history" class="chat-history" aria-live="polite"></div>
+                <!-- Create ticket shortcut -->
+                <div class="agent-chat-actions">
+                    <button
+                        type="button"
+                        id="start-customer-ticket"
+                        class="button button--secondary"
+                    >
+                        Create Ticket for Customer
+                    </button>
+                </div>
 
-                    <p id="agent-chat-error" class="chat-error hidden" role="alert"></p>
+                <div
+                    id="agent-chat-history"
+                    class="chat-history"
+                    aria-live="polite"
+                ></div>
 
-                    <form id="agent-chat-form" class="chat-composer">
-                        <div class="field">
-                            <textarea name="message" rows="2" placeholder="Ask the AI assistant..." required></textarea>
-                        </div>
+                <p
+                    id="agent-chat-error"
+                    class="chat-error hidden"
+                    role="alert"
+                ></p>
 
-                        <button type="submit" class="button">
-                            Send
-                        </button>
-                    </form>
+                <form id="agent-chat-form" class="chat-composer">
+                    <div class="field">
+                        <textarea
+                            name="message"
+                            rows="2"
+                            placeholder="Ask the AI assistant..."
+                            required
+                        ></textarea>
+                    </div>
 
-                </section>
-            </div>
+                    <button type="submit" class="button">
+                        Send
+                    </button>
+                </form>
 
-        </main>
+            </section>
+        </div>
 
-        <script type="module" src="../js/app.js"></script>
-    </body>
+    </main>
 
-</html>
+    <script type="module" src="../js/app.js"></script>
+</body>

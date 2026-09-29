@@ -67,13 +67,12 @@ export function renderTicketTable(
         "",
     ];
 
-    const rows = tickets
-        .map((ticket, index) => {
-            const displayTicketId =
-                role === "customer"
-                    ? index + 1
-                    : ticket.id;
-
+            const rows = tickets
+                .map((ticket, index) => {
+                    const displayTicketId =
+                        role === "customer" || role === "agent" || role==="admin"
+                            ? index + 1
+                            : ticket.id;
             const action = actionRenderer
                 ? actionRenderer(ticket)
                 : `<a class="table-link" href="${ticketDetailsPath(

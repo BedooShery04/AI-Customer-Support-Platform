@@ -89,7 +89,7 @@ class AIService:
     def _normalize(text: str) -> str:
         return " ".join(
             text.strip().casefold().split()
-        ).rstrip(".!")
+        ).rstrip(".!،؟?")
 
     @staticmethod
     def _draft_expired(
@@ -605,19 +605,12 @@ class AIService:
             user_id,
         )
 
-        # Show a newly created or revised creation draft.
+        # Always display the actual saved draft when one exists.
         if updated is not None:
-            current = (
-                updated.customer_id,
-                list(updated.tickets),
-                updated.created_at,
+            reply = AIService._format_pending_draft(
+                db,
+                updated,
             )
-
-            if previous != current:
-                reply = AIService._format_pending_draft(
-                    db,
-                    updated,
-                )
 
         # Show a newly created or revised edit draft.
         if updated_edit is not None:

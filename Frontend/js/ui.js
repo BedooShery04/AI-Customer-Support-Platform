@@ -38,6 +38,7 @@ const navigation = {
         ["dashboard", "Dashboard", "/agent/dashboard.html", "dashboard"],
         ["assigned-tickets", "Assigned Tickets", "/agent/assigned-tickets.html", "ticket"],
         ["customers", "Customers", "/agent/customers.html", "users"],
+        ["ai-assistant", "AI Assistant", "/agent/ai-assistant.html", "chat"],
         ["profile", "My Profile", "/profile.html", "profile"],
     ],
     [ROLES.ADMIN]: [

@@ -85,7 +85,7 @@ def build_tools(
     the backend, never from the chat message.
     """
 
-    verified_customer_ids: set[int] = set()
+  
 
     # ====================================================
     # Customer Tickets
@@ -290,9 +290,7 @@ def build_tools(
                 "message": "Active customer not found.",
             }
 
-        verified_customer_ids.add(
-            customer.id
-        )
+
 
         return {
             "success": True,
@@ -307,60 +305,79 @@ def build_tools(
     # Create Draft on Behalf of Customer
     # ====================================================
 
+    
     @tool
     def propose_tickets_on_behalf(
-        customer_id: int,
+        customer_email: str,
         tickets: list[ProposedTicket],
     ):
         """
-        Save ticket creation drafts for a verified customer.
+        Save ticket creation drafts for an active customer.
 
-        The authenticated agent must confirm before
-        the tickets are actually created.
+        Verify the customer's exact email again before
+        saving the draft. Actual ticket creation requires
+        explicit confirmation by the authenticated agent.
         """
         if user_role != UserRole.AGENT:
             return {
                 "success": False,
                 "status_code": 403,
-                "message": (
-                    "Only agents can use this tool."
-                ),
-            }
-
-        if customer_id not in verified_customer_ids:
-            return {
-                "success": False,
-                "message": (
-                    "Verify this customer by email "
-                    "before preparing a draft."
-                ),
+                "message": "Only agents can use this tool.",
             }
 
         if not 1 <= len(tickets) <= 5:
             return {
                 "success": False,
-                "message": (
-                    "Provide between 1 and 5 tickets."
-                ),
+                "message": "Provide between 1 and 5 tickets.",
             }
 
-        customer = (
-            db.query(User)
-            .filter(
-                User.id == customer_id,
-                User.role == UserRole.CUSTOMER,
-                User.status == UserStatus.ACTIVE,
-            )
-            .first()
-        )
+        email = customer_email.strip().lower()
 
-        if customer is None:
+        if not email:
             return {
                 "success": False,
-                "message": "Active customer not found.",
+                "message": "Customer email is required.",
             }
 
         try:
+            agent = db.get(User, user_id)
+
+            if (
+                agent is None
+                or agent.role != UserRole.AGENT
+                or agent.status != UserStatus.ACTIVE
+            ):
+                return {
+                    "success": False,
+                    "status_code": 403,
+                    "message": "Only active agents can create drafts.",
+                }
+
+            customer = (
+                db.query(User)
+                .filter(
+                    func.lower(User.email) == email,
+                    User.role == UserRole.CUSTOMER,
+                    User.status == UserStatus.ACTIVE,
+                )
+                .first()
+            )
+
+            if customer is None:
+                return {
+                    "success": False,
+                    "message": "Active customer not found.",
+                }
+
+            if db.get(PendingTicketUpdate, user_id) is not None:
+                return {
+                    "success": False,
+                    "message": (
+                        "Please confirm or cancel the pending "
+                        "ticket edit before creating a new draft."
+                    ),
+                }
+
             validated = [
                 TicketCreate(
                     subject=item.subject,
@@ -369,10 +386,7 @@ def build_tools(
                 for item in tickets
             ]
 
-            draft = db.get(
-                PendingTicketDraft,
-                user_id,
-            )
+            draft = db.get(PendingTicketDraft, user_id)
 
             if draft is None:
                 draft = PendingTicketDraft(
@@ -381,15 +395,11 @@ def build_tools(
                     tickets=validated,
                     created_at=datetime.now(timezone.utc),
                 )
-
                 db.add(draft)
-
             else:
                 draft.customer_id = customer.id
                 draft.tickets = validated
-                draft.created_at = datetime.now(
-                    timezone.utc
-                )
+                draft.created_at = datetime.now(timezone.utc)
 
             db.commit()
 
@@ -403,13 +413,13 @@ def build_tools(
                 "tickets": validated,
                 "tickets_created": 0,
                 "message": (
-                    "Draft saved; agent confirmation required."
+                    "Draft saved successfully. "
+                    "Explicit agent confirmation is required."
                 ),
             }
 
         except ValidationError:
             db.rollback()
-
             return {
                 "success": False,
                 "message": "Invalid ticket details.",
@@ -418,7 +428,6 @@ def build_tools(
         except Exception:
             db.rollback()
             raise
-
     # ====================================================
     # Check Ticket Status
     # ====================================================

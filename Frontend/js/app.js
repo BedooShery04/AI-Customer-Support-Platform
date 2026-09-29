@@ -52,6 +52,7 @@ const controllers = {
     "agent-ticket-details": initAgentTicketDetails,
     "agent-customers": initAgentCustomers,
     "agent-customer-details": initAgentCustomerDetails,
+  
 
     "admin-dashboard": initAdminDashboard,
     "admin-users": initAdminUsers,

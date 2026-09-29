@@ -189,6 +189,14 @@ export async function initAssignedTickets(user) {
 /* Ticket Overview */
 
 function renderAgentTicketOverview(container, ticket) {
+    const assignedAgentName =
+        ticket.assignedAgent?.name ||
+        (
+            ticket.assignedAgentId != null
+                ? `Agent #${ticket.assignedAgentId}`
+                : "Unassigned"
+        );
+
     container.innerHTML = `
         <div class="ticket-heading-row">
             <div>
@@ -227,11 +235,7 @@ function renderAgentTicketOverview(container, ticket) {
 
             <div>
                 <dt>Assigned Agent</dt>
-                <dd>
-                    ${escapeHTML(
-                        ticket.assignedAgent?.name || "Unassigned",
-                    )}
-                </dd>
+                <dd>${escapeHTML(assignedAgentName)}</dd>
             </div>
 
             <div>
@@ -531,7 +535,7 @@ function bindAIClassification(
 
 /* Agent Ticket Details */
 
-export async function initAgentTicketDetails() {
+export async function initAgentTicketDetails(user) {
     const ticketId = getQueryTicketId();
 
     const overview = document.querySelector(
@@ -581,6 +585,19 @@ export async function initAgentTicketDetails() {
             getTicketById(ticketId),
             getTicketMessages(ticketId),
         ]);
+
+        // Use the logged-in agent's name when this ticket
+        // is assigned to that agent.
+        if (
+            user &&
+            ticket.assignedAgentId != null &&
+            String(ticket.assignedAgentId) === String(user.id)
+        ) {
+            ticket.assignedAgent = {
+                id: user.id,
+                name: user.name,
+            };
+        }
 
         renderAgentTicketOverview(overview, ticket);
         renderMessages(conversation, messages);

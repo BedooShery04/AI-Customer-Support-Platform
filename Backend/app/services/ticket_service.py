@@ -1,3 +1,4 @@
+
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -9,11 +10,10 @@ from app.enums import TicketCategory, TicketPriority
 from app.enums.user import UserRole, UserStatus
 from app.models.audit_log import AuditLog
 from app.models.pending_ticket_draft import PendingTicketDraft
+from app.models.pending_ticket_update import PendingTicketUpdate
 from app.models.ticket import Ticket
 from app.models.user import User
 from app.schemas.ticket import TicketCreate, TicketUpdate
-from app.models.pending_ticket_update import PendingTicketUpdate
-
 
 
 DAILY_TICKET_LIMIT = 5
@@ -143,9 +143,11 @@ def _new_ticket(
     db: Session,
     customer_id: int,
     data: TicketCreate,
+    assigned_agent_id: int | None = None,
 ) -> Ticket:
     ticket = Ticket(
         customer_id=customer_id,
+        assigned_agent_id=assigned_agent_id,
         subject=data.subject,
         description=data.description,
         category=TicketCategory.GENERAL_INQUIRY,
@@ -284,6 +286,7 @@ def create_ticket(
         _require_active_customer(db, user_id)
         _check_daily_allowance(db, user_id, 1)
 
+        # Customer-created tickets remain unassigned.
         ticket = _new_ticket(
             db,
             user_id,
@@ -309,6 +312,9 @@ def create_ticket_on_behalf(
     """
     Create a ticket for an active customer.
 
+    Automatically assign the ticket to the agent
+    who created it.
+
     The ticket and audit record are committed together.
     """
     try:
@@ -320,6 +326,7 @@ def create_ticket_on_behalf(
             db,
             customer_id,
             ticket_data,
+            assigned_agent_id=agent_id,
         )
 
         db.add(
@@ -328,7 +335,8 @@ def create_ticket_on_behalf(
                 ticket_id=ticket.id,
                 action=(
                     "Ticket created on behalf of "
-                    f"customer #{customer_id}"
+                    f"customer #{customer_id} and automatically "
+                    f"assigned to agent #{agent_id}"
                 ),
             )
         )
@@ -354,6 +362,9 @@ def confirm_ticket_draft(
 
     Either all proposed tickets are created,
     or none are created.
+
+    Agent-created tickets are automatically assigned
+    to the agent who confirmed the draft.
     """
     try:
         draft = (
@@ -435,6 +446,7 @@ def confirm_ticket_draft(
                 db,
                 customer_id,
                 data,
+                assigned_agent_id=agent_id,
             )
 
             if agent_id is not None:
@@ -444,7 +456,8 @@ def confirm_ticket_draft(
                         ticket_id=ticket.id,
                         action=(
                             "Ticket created on behalf of "
-                            f"customer #{customer_id}"
+                            f"customer #{customer_id} and automatically "
+                            f"assigned to agent #{agent_id}"
                         ),
                     )
                 )
@@ -461,12 +474,12 @@ def confirm_ticket_draft(
 
     except Exception:
         db.rollback()
-
         raise
 
 
-
-
+# ============================================================
+# Customer Ticket Updates
+# ============================================================
 
 def update_customer_ticket(
     ticket_id: int,
@@ -507,7 +520,11 @@ def update_customer_ticket(
             detail="You cannot update another customer's ticket.",
         )
 
-    ticket_status = getattr(ticket.status, "value", ticket.status)
+    ticket_status = getattr(
+        ticket.status,
+        "value",
+        ticket.status,
+    )
 
     if ticket_status != "Open":
         raise HTTPException(
@@ -543,13 +560,12 @@ def update_customer_ticket(
     try:
         db.commit()
         db.refresh(ticket)
+
         return ticket
 
     except Exception:
         db.rollback()
         raise
-
-
 
 
 # ============================================================
@@ -598,7 +614,7 @@ def update_ticket(
             )
 
     changes = ticket_data.model_dump(
-        exclude_unset=True
+        exclude_unset=True,
     )
 
     changes.pop("assigned_agent_id", None)
@@ -676,10 +692,9 @@ def delete_ticket(
     db.commit()
 
 
-
-
-
-
+# ============================================================
+# Confirm Customer Ticket Update
+# ============================================================
 
 def confirm_customer_ticket_update(
     db: Session,
@@ -748,7 +763,9 @@ def confirm_customer_ticket_update(
             )
 
         current_status = getattr(
-            ticket.status, "value", ticket.status
+            ticket.status,
+            "value",
+            ticket.status,
         )
 
         if current_status != "Open":
