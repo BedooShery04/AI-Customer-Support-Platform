@@ -976,12 +976,13 @@ Potential improvements include:
 
 ---
 
-## 👨‍💻 Author
+## 👥 Contributors
 
-**Abdurrahman Sherif**
-
-GitHub: [@BedooShery04](https://github.com/BedooShery04)
-
+| Contributor | GitHub |
+| ----------- | ------ |
+| **Abdurrahman Sherif** | [@BedooShery04](https://github.com/BedooShery04) |
+| **Hoda Mahmoud** | [@HodaMahmoud111](https://github.com/HodaMahmoud111) |
+| **Abdurrahman Antar** | [@abdoantaaaar](https://github.com/abdoantaaaar)
 ---
 
 ## 📄 License
