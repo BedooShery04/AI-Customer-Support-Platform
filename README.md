@@ -397,6 +397,9 @@ Send Email Notification
 * Retrieves the ticket information.
 * Sends an automated email notification to the relevant support party.
 
+**n8n Workflow**
+https://hodaagiba.app.n8n.cloud/workflow/EsYwHnrZTaQmd1y1
+
 ---
 
 ### Workflow 2 — Ticket Escalation
@@ -420,6 +423,9 @@ Send Email Notification
 * Detects ticket escalation events through PostgreSQL.
 * Retrieves the escalated ticket details.
 * Sends an automated email notification to the relevant party.
+
+**n8n Workflow:**
+https://hodaagiba.app.n8n.cloud/workflow/5JqsZ2GMxjcSRsS2
 
 ---
 
@@ -447,7 +453,7 @@ Append Data to Google Sheets
 * Appends the results to a Google Sheet for reporting and analysis.
 
 **n8n Workflow:**
-https://hodaagiba.app.n8n.cloud/workflow/nfLOkDAvnda9Zoqe
+https://hodaagiba.app.n8n.cloud/workflow/crcisTVMDaLl5qli
 
 ---
 
@@ -488,7 +494,7 @@ Insert Follow-up Record
 * Records the follow-up operation in the database.
 
 **n8n Workflow:**
-https://hodaagiba.app.n8n.cloud/workflow/crcisTVMDaLl5qli
+https://hodaagiba.app.n8n.cloud/workflow/nfLOkDAvnda9Zoqe
 
 ---
 
@@ -542,9 +548,7 @@ These workflows extend the platform beyond the core FastAPI application by provi
 
 * **LangChain**
 * **LangGraph**
-* **Google Gemini integration**
 * **Groq integration**
-* **OpenAI integration**
 * Tool-based AI operations
 * Role-aware AI capabilities
 
@@ -784,9 +788,7 @@ SECRET_KEY=your-secret-key
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 
-GOOGLE_API_KEY=your-google-api-key
 GROQ_API_KEY=your-groq-api-key
-OPENAI_API_KEY=your-openai-api-key
 ```
 
 Only configure the LLM provider(s) used by your deployment.
@@ -980,13 +982,64 @@ AI-Customer-Support-Platform
 ├── Backend
 │   ├── app
 │   │   ├── agent
+│   │   │   ├── graph.py
+│   │   │   ├── prompts.py
+│   │   │   └── tools.py 
+│   │   │
 │   │   ├── database
+│   │   │   ├── __init__.py
+│   │   │   ├── base_class.py
+│   │   │   └── database.py
+│   │   │
 │   │   ├── dependencies
+│   │   │   ├── __init__.py
+│   │   │   ├── auth.py
+│   │   │   └── roles.py
+│   │   │
 │   │   ├── enums
+│   │   │   ├── __init__.py
+│   │   │   ├── ticket.py
+│   │   │   └── user.py
+│   │   │
 │   │   ├── models
+│   │   │   ├── __init__.py
+│   │   │   ├── ai_chat_message.py
+│   │   │   ├── ai_chat.py
+│   │   │   ├── ai_classification.py
+│   │   │   ├── audit_log.py
+│   │   │   ├── message.py
+│   │   │   ├── pending_ticket_draft.py
+│   │   │   ├── pending_ticket_update.py
+│   │   │   ├── ticket.py
+│   │   │   └── user.py
+│   │   │
 │   │   ├── routers
+│   │   │   ├── admin.py
+│   │   │   ├── ai.py
+│   │   │   ├── auth.py
+│   │   │   ├── messages.py
+│   │   │   ├── tickets.py
+│   │   │   └── users.py
+│   │   │
 │   │   ├── schemas
+│   │   │   ├── admin_dashboard.py
+│   │   │   ├── ai_chat.py
+│   │   │   ├── ai_classification.py
+│   │   │   ├── ai_suggestion.py
+│   │   │   ├── audit_log.py
+│   │   │   ├── auth.py
+│   │   │   ├── message.py
+│   │   │   ├── ticket.py
+│   │   │   └── user.py
+│   │   │
 │   │   ├── services
+│   │   │   ├── ai_service.py
+│   │   │   ├── auth_service.py
+│   │   │   ├── message_service.py
+│   │   │   ├── ticket_service.py
+│   │   │   └── user_srevice.py
+│   │   │
+│   │   ├── __init__.py
 │   │   ├── main.py
 │   │   └── seed.py
 │   │
@@ -997,10 +1050,54 @@ AI-Customer-Support-Platform
 │
 ├── Frontend
 │   ├── admin
+│   │   ├── agnets.html
+│   │   ├── dashboard.html
+│   │   ├── statistics.html
+│   │   ├── tickets.html
+│   │   └── users.html
+│   │
 │   ├── agent
+│   │   ├── ai_assistant.html
+│   │   ├── assigned-tickets.html
+│   │   ├── customer-details.html
+│   │   ├── customers.html
+│   │   ├── dasboard.html
+│   │   └── ticket-details.html
+│   │
+│   ├── assets
+│   │   └── favicon.svg
+│   │
 │   ├── customer
+│   │   ├── chatbot.html
+│   │   ├── create-ticket.html
+│   │   ├── dasboard.html
+│   │   ├── ticket-details.html
+│   │   └── tickets.html
+│   │
 │   ├── css
+│   │   ├── auth.css
+│   │   ├── chatbot.css
+│   │   ├── customer.css
+│   │   ├── dasboard.css
+│   │   ├── global.css
+│   │   ├── profile.css
+│   │   └── tickets.css
+│   │
 │   ├── js
+│   │   ├── admin.js
+│   │   ├── agents.js
+│   │   ├── api.js
+│   │   ├── app.js
+│   │   ├── auth.js
+│   │   ├── chatbot.js
+│   │   ├── config.js
+│   │   ├── customer.js
+│   │   ├── profile.js
+│   │   ├── tickets.js
+│   │   ├── ui.js
+│   │   └── webmcp.js
+│   │
+│   ├── index.html
 │   ├── login.html
 │   ├── register.html
 │   └── profile.html
