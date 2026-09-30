@@ -22,12 +22,7 @@ model = ChatGroq(
 )
 
 
-def build_graph(
-    db,
-    user_id: int,
-    chat_id: int,
-    user_role: UserRole,
-):
+def build_graph(db, user_id: int,chat_id: int, user_role: UserRole,):
     agent_tools = build_tools(
         db=db,
         user_id=user_id,

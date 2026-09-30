@@ -3,7 +3,8 @@ from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from langchain_core.tools import tool
-from pydantic import BaseModel, Field, ValidationError
+from app.schemas.proposed_ticket import ProposedTicket
+from pydantic import  ValidationError
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -17,16 +18,6 @@ from app.schemas.ticket import TicketCreate, TicketUpdate
 from app.services import ticket_service
 
 
-class ProposedTicket(BaseModel):
-    subject: str = Field(
-        min_length=5,
-        max_length=200,
-    )
-
-    description: str = Field(
-        min_length=10,
-        max_length=5000,
-    )
 
 
 def _ticket_to_dict(
