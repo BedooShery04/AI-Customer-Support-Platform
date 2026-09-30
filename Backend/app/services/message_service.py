@@ -88,4 +88,12 @@ class MessageService:
             db.rollback()
             raise
 
-        return new_message
+        return {
+    "id": new_message.id,
+    "ticket_id": new_message.ticket_id,
+    "sender_id": new_message.sender_id,
+    "sender_role": new_message.sender.role.value,
+    "sender_name": new_message.sender.name,
+    "message": new_message.message,
+    "created_at": new_message.created_at,
+}
